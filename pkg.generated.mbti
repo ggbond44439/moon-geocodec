@@ -1,0 +1,119 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "ggbond44439/moon_geocodec"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct BoundingBox {
+  min_x : Double
+  min_y : Double
+  max_x : Double
+  max_y : Double
+} derive(Eq, @debug.Debug)
+pub fn BoundingBox::equal(Self, Self) -> Bool
+pub fn BoundingBox::height(Self) -> Double
+pub fn BoundingBox::not_equal(Self, Self) -> Bool
+pub fn BoundingBox::to_repr(Self) -> @debug.Repr
+pub fn BoundingBox::width(Self) -> Double
+
+pub(all) struct Coordinate {
+  x : Double
+  y : Double
+  z : Double?
+  m : Double?
+} derive(Eq, @debug.Debug)
+pub fn Coordinate::dimension(Self) -> CoordinateDimension
+pub fn Coordinate::equal(Self, Self) -> Bool
+pub fn Coordinate::has_m(Self) -> Bool
+pub fn Coordinate::has_z(Self) -> Bool
+pub fn Coordinate::not_equal(Self, Self) -> Bool
+pub fn Coordinate::to_repr(Self) -> @debug.Repr
+pub fn Coordinate::xy(Double, Double) -> Self
+pub fn Coordinate::xym(Double, Double, Double) -> Self
+pub fn Coordinate::xyz(Double, Double, Double) -> Self
+pub fn Coordinate::xyzm(Double, Double, Double, Double) -> Self
+
+pub(all) enum CoordinateDimension {
+  Xy
+  Xyz
+  Xym
+  Xyzm
+} derive(Eq, @debug.Debug)
+pub fn CoordinateDimension::equal(Self, Self) -> Bool
+pub fn CoordinateDimension::not_equal(Self, Self) -> Bool
+pub fn CoordinateDimension::to_repr(Self) -> @debug.Repr
+
+pub(all) enum GeoError {
+  InvalidWkt(String, Int)
+  InvalidWkb(String, Int)
+  InvalidCoordinate(String)
+  InvalidBoundary(String, Int)
+  UnsupportedGeometry(String)
+  InvalidLimit(String, Int)
+  LimitExceeded(String, Int, Int)
+  Truncated(String, Int)
+  TrailingBytes(Int)
+  InvalidSrid(Int)
+} derive(Eq, @debug.Debug)
+pub fn GeoError::equal(Self, Self) -> Bool
+pub fn GeoError::not_equal(Self, Self) -> Bool
+pub fn GeoError::output(Self, &Logger) -> Unit
+pub fn GeoError::to_repr(Self) -> @debug.Repr
+pub fn GeoError::to_string(Self) -> String
+pub impl Show for GeoError
+
+pub(all) struct GeoLimits {
+  max_text_bytes : Int
+  max_depth : Int
+  max_geometries : Int
+  max_coordinates : Int
+} derive(Eq, @debug.Debug)
+pub fn GeoLimits::check_coordinates(Self, Int) -> Result[Unit, GeoError]
+pub fn GeoLimits::check_depth(Self, Int) -> Result[Unit, GeoError]
+pub fn GeoLimits::check_geometries(Self, Int) -> Result[Unit, GeoError]
+pub fn GeoLimits::check_text(Self, Int) -> Result[Unit, GeoError]
+pub fn GeoLimits::default() -> Self
+pub fn GeoLimits::equal(Self, Self) -> Bool
+pub fn GeoLimits::new(Int, Int, Int, Int) -> Result[Self, GeoError]
+pub fn GeoLimits::not_equal(Self, Self) -> Bool
+pub fn GeoLimits::to_repr(Self) -> @debug.Repr
+
+pub(all) enum Geometry {
+  Point(Coordinate)
+  LineString(Array[Coordinate])
+  Polygon(Array[Array[Coordinate]])
+  MultiPoint(Array[Coordinate])
+  MultiLineString(Array[Array[Coordinate]])
+  MultiPolygon(Array[Array[Array[Coordinate]]])
+  GeometryCollection(Array[Geometry])
+} derive(Eq, @debug.Debug)
+pub fn Geometry::bounds(Self) -> BoundingBox?
+pub fn Geometry::coordinate_count(Self) -> Int
+pub fn Geometry::equal(Self, Self) -> Bool
+pub fn Geometry::is_empty(Self) -> Bool
+pub fn Geometry::kind(Self) -> GeometryKind
+pub fn Geometry::not_equal(Self, Self) -> Bool
+pub fn Geometry::to_repr(Self) -> @debug.Repr
+
+pub(all) enum GeometryKind {
+  Point
+  LineString
+  Polygon
+  MultiPoint
+  MultiLineString
+  MultiPolygon
+  GeometryCollection
+} derive(Eq, @debug.Debug)
+pub fn GeometryKind::equal(Self, Self) -> Bool
+pub fn GeometryKind::not_equal(Self, Self) -> Bool
+pub fn GeometryKind::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

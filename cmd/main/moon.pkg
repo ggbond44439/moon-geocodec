@@ -1,0 +1,5 @@
+// import {
+//   "ggbond44439/moon_geocodec" @lib,
+// }
+
+pkgtype(kind: "executable")
