@@ -1,3 +1,3 @@
-// Main package file for your library code.
-// Put public APIs and shared helpers here.
-// Keep blocks small and focused for easy refactors.
+///|
+/// Public version marker for the MoonGeoCodec library.
+pub const VERSION : String = "0.1.0"
