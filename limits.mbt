@@ -5,6 +5,7 @@ pub(all) struct GeoLimits {
   max_depth : Int
   max_geometries : Int
   max_coordinates : Int
+  max_tokens : Int
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -14,6 +15,7 @@ pub fn GeoLimits::default() -> GeoLimits {
     max_depth: 256,
     max_geometries: 100000,
     max_coordinates: 1000000,
+    max_tokens: 2000000,
   }
 }
 
@@ -36,7 +38,30 @@ pub fn GeoLimits::new(
   if max_coordinates <= 0 {
     return Err(InvalidLimit("max_coordinates", max_coordinates))
   }
-  Ok({ max_text_bytes, max_depth, max_geometries, max_coordinates, })
+  Ok({
+    max_text_bytes,
+    max_depth,
+    max_geometries,
+    max_coordinates,
+    max_tokens: 2000000,
+  })
+}
+
+///|
+pub fn GeoLimits::with_token_limit(
+  self : GeoLimits,
+  max_tokens : Int,
+) -> Result[GeoLimits, GeoError] {
+  if max_tokens <= 0 {
+    return Err(InvalidLimit("max_tokens", max_tokens))
+  }
+  Ok({
+    max_text_bytes: self.max_text_bytes,
+    max_depth: self.max_depth,
+    max_geometries: self.max_geometries,
+    max_coordinates: self.max_coordinates,
+    max_tokens,
+  })
 }
 
 ///|
@@ -82,6 +107,18 @@ pub fn GeoLimits::check_coordinates(
 ) -> Result[Unit, GeoError] {
   if actual > self.max_coordinates {
     Err(LimitExceeded("coordinate count", self.max_coordinates, actual))
+  } else {
+    Ok(())
+  }
+}
+
+///|
+pub fn GeoLimits::check_tokens(
+  self : GeoLimits,
+  actual : Int,
+) -> Result[Unit, GeoError] {
+  if actual > self.max_tokens {
+    Err(LimitExceeded("token count", self.max_tokens, actual))
   } else {
     Ok(())
   }

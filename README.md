@@ -7,7 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.0` is the initial foundation release. The current milestone establishes
+`0.1.1` adds the WKT tokenizer and configurable token limits. The current milestone establishes
 the project layout, typed errors, resource limits, geometry model, and bounds
 calculation. WKT, WKB, EWKB, and GeoJSON codecs are developed in subsequent
 milestones.
@@ -32,7 +32,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.0
+moon add ggbond44439/moon_geocodec@0.1.1
 ```
 
 ## Build and test
