@@ -30,7 +30,7 @@ pub fn WktTokenKind::name(self : WktTokenKind) -> String {
 pub(all) struct WktToken {
   kind : WktTokenKind
   text : String
-  offset : Int
+  offset : Int32
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -44,7 +44,7 @@ pub fn WktToken::text(self : WktToken) -> String {
 }
 
 ///|
-pub fn WktToken::offset(self : WktToken) -> Int {
+pub fn WktToken::offset(self : WktToken) -> Int32 {
   self.offset
 }
 
@@ -74,12 +74,12 @@ fn is_word_continue(code : UInt16) -> Bool {
 }
 
 ///|
-fn token_text(source : StringView, start : Int, end : Int) -> String {
+fn token_text(source : StringView, start : Int32, end : Int32) -> String {
   source.view(start_offset=start, end_offset=end).to_owned()
 }
 
 ///|
-fn scan_word_end(source : StringView, start : Int) -> Int {
+fn scan_word_end(source : StringView, start : Int32) -> Int32 {
   let length = source.length()
   let mut index = start + 1
   while index < length && is_word_continue(source.at(index)) {
@@ -89,7 +89,10 @@ fn scan_word_end(source : StringView, start : Int) -> Int {
 }
 
 ///|
-fn scan_number_end(source : StringView, start : Int) -> Result[Int, GeoError] {
+fn scan_number_end(
+  source : StringView,
+  start : Int32,
+) -> Result[Int32, GeoError] {
   let length = source.length()
   let mut index = start
   if index < length && (source.at(index) == 43 || source.at(index) == 45) {

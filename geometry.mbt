@@ -123,7 +123,7 @@ pub fn Geometry::kind(self : Geometry) -> GeometryKind {
 }
 
 ///|
-pub fn Geometry::coordinate_count(self : Geometry) -> Int {
+pub fn Geometry::coordinate_count(self : Geometry) -> Int32 {
   match self {
     Point(_) => 1
     LineString(points) => points.length()
@@ -142,7 +142,7 @@ pub fn Geometry::coordinate_count(self : Geometry) -> Int {
 }
 
 ///|
-fn coordinate_count_rings(rings : Array[Array[Coordinate]]) -> Int {
+fn coordinate_count_rings(rings : Array[Array[Coordinate]]) -> Int32 {
   let mut count = 0
   for ring in rings {
     count += ring.length()
@@ -151,12 +151,14 @@ fn coordinate_count_rings(rings : Array[Array[Coordinate]]) -> Int {
 }
 
 ///|
-fn coordinate_count_lines(lines : Array[Array[Coordinate]]) -> Int {
+fn coordinate_count_lines(lines : Array[Array[Coordinate]]) -> Int32 {
   coordinate_count_rings(lines)
 }
 
 ///|
-fn coordinate_count_polygons(polygons : Array[Array[Array[Coordinate]]]) -> Int {
+fn coordinate_count_polygons(
+  polygons : Array[Array[Array[Coordinate]]],
+) -> Int32 {
   let mut count = 0
   for polygon in polygons {
     count += coordinate_count_rings(polygon)

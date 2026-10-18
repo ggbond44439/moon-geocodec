@@ -1,16 +1,16 @@
 ///|
 /// Typed failures produced by MoonGeoCodec parsers and validators.
 pub(all) enum GeoError {
-  InvalidWkt(String, Int)
-  InvalidWkb(String, Int)
+  InvalidWkt(String, Int32)
+  InvalidWkb(String, Int32)
   InvalidCoordinate(String)
-  InvalidBoundary(String, Int)
+  InvalidBoundary(String, Int32)
   UnsupportedGeometry(String)
-  InvalidLimit(String, Int)
-  LimitExceeded(String, Int, Int)
-  Truncated(String, Int)
-  TrailingBytes(Int)
-  InvalidSrid(Int)
+  InvalidLimit(String, Int32)
+  LimitExceeded(String, Int32, Int32)
+  Truncated(String, Int32)
+  TrailingBytes(Int32)
+  InvalidSrid(Int32)
 } derive(Eq, @debug.Debug)
 
 ///|

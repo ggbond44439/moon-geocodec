@@ -12,6 +12,24 @@ the project layout, typed errors, resource limits, geometry model, and bounds
 calculation. WKT, WKB, EWKB, and GeoJSON codecs are developed in subsequent
 milestones.
 
+## WKT lexer
+
+```moonbit
+let tokens = match @moon_geocodec.tokenize_wkt(
+  "POINT Z (1 2 3)",
+  @moon_geocodec.GeoLimits::default(),
+) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+assert_eq(tokens[0].text(), "POINT")
+assert_eq(tokens[1].text(), "Z")
+```
+
+The lexer returns token kinds, source text, and code-unit offsets. It rejects
+malformed numbers and unexpected characters with `GeoError::InvalidWkt`, and
+enforces both text-byte and token-count limits.
+
 ## Scope
 
 - Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, and
