@@ -123,30 +123,17 @@ test "WKB writer output round trips for every geometry variant" {
 }
 
 ///|
-test "WKB writer rejects dimensions and invalid coordinates" {
+test "WKB writer rejects inconsistent dimensions and invalid coordinates" {
   assert_eq(
     @moon_geocodec.format_wkb(
-      @moon_geocodec.Geometry::Point(
-        @moon_geocodec.Coordinate::xyz(1.0, 2.0, 3.0),
-      ),
+      @moon_geocodec.Geometry::GeometryCollection([
+        @moon_geocodec.Geometry::Point(@moon_geocodec.Coordinate::xy(1.0, 2.0)),
+        @moon_geocodec.Geometry::Point(
+          @moon_geocodec.Coordinate::xyz(3.0, 4.0, 5.0),
+        ),
+      ]),
     ),
-    Err(
-      @moon_geocodec.InvalidCoordinate(
-        "WKB writer supports only XY coordinates",
-      ),
-    ),
-  )
-  assert_eq(
-    @moon_geocodec.format_wkb(
-      @moon_geocodec.Geometry::Point(
-        @moon_geocodec.Coordinate::xym(1.0, 2.0, 3.0),
-      ),
-    ),
-    Err(
-      @moon_geocodec.InvalidCoordinate(
-        "WKB writer supports only XY coordinates",
-      ),
-    ),
+    Err(@moon_geocodec.InvalidCoordinate("inconsistent coordinate dimensions")),
   )
   assert_eq(
     @moon_geocodec.format_wkb(

@@ -142,21 +142,56 @@ fn WkbReader::record_coordinate(self : WkbReader) -> Result[Unit, GeoError] {
 }
 
 ///|
-fn validate_xy(x : Double, y : Double) -> Result[Unit, GeoError] {
+fn validate_coordinate_values(
+  x : Double,
+  y : Double,
+  z : Double?,
+  m : Double?,
+) -> Result[Unit, GeoError] {
   if x.is_nan() || x.is_inf() {
     Err(InvalidCoordinate("non-finite x ordinate"))
   } else if y.is_nan() || y.is_inf() {
     Err(InvalidCoordinate("non-finite y ordinate"))
+  } else if (match z {
+      Some(value) => value.is_nan() || value.is_inf()
+      None => false
+    }) {
+    Err(InvalidCoordinate("non-finite z ordinate"))
+  } else if (match m {
+      Some(value) => value.is_nan() || value.is_inf()
+      None => false
+    }) {
+    Err(InvalidCoordinate("non-finite m ordinate"))
   } else {
     Ok(())
   }
 }
 
 ///|
-fn WkbReader::read_xy(
+fn is_empty_point_values(
+  x : Double,
+  y : Double,
+  z : Double?,
+  m : Double?,
+) -> Bool {
+  x.is_nan() &&
+  y.is_nan() &&
+  (match z {
+    Some(value) => value.is_nan()
+    None => true
+  }) &&
+  (match m {
+    Some(value) => value.is_nan()
+    None => true
+  })
+}
+
+///|
+fn WkbReader::read_ordinate_values(
   self : WkbReader,
   order : WkbByteOrder,
-) -> Result[(Double, Double), GeoError] {
+  dimension : CoordinateDimension,
+) -> Result[(Double, Double, Double?, Double?), GeoError] {
   let x = match self.read_f64(order, "x ordinate") {
     Ok(value) => value
     Err(err) => return Err(err)
@@ -165,13 +200,51 @@ fn WkbReader::read_xy(
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  Ok((x, y))
+  let z : Double? = match dimension {
+    Xyz | Xyzm =>
+      match self.read_f64(order, "z ordinate") {
+        Ok(value) => Some(value)
+        Err(err) => return Err(err)
+      }
+    _ => None
+  }
+  let m : Double? = match dimension {
+    Xym | Xyzm =>
+      match self.read_f64(order, "m ordinate") {
+        Ok(value) => Some(value)
+        Err(err) => return Err(err)
+      }
+    _ => None
+  }
+  Ok((x, y, z, m))
+}
+
+///|
+fn WkbReader::read_coordinate(
+  self : WkbReader,
+  order : WkbByteOrder,
+  dimension : CoordinateDimension,
+) -> Result[Coordinate, GeoError] {
+  let (x, y, z, m) = match self.read_ordinate_values(order, dimension) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  match validate_coordinate_values(x, y, z, m) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  match self.record_coordinate() {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  Ok({ x, y, z, m, })
 }
 
 ///|
 fn WkbReader::read_coordinates(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
   count : Int32,
 ) -> Result[Array[Coordinate], GeoError] {
   if count > self.limits.max_coordinates {
@@ -181,19 +254,11 @@ fn WkbReader::read_coordinates(
   }
   let coordinates : Array[Coordinate] = []
   for _ in 0..<count {
-    let (x, y) = match self.read_xy(order) {
+    let coordinate = match self.read_coordinate(order, dimension) {
       Ok(value) => value
       Err(err) => return Err(err)
     }
-    match validate_xy(x, y) {
-      Ok(_) => ()
-      Err(err) => return Err(err)
-    }
-    match self.record_coordinate() {
-      Ok(_) => ()
-      Err(err) => return Err(err)
-    }
-    coordinates.push(Coordinate::xy(x, y))
+    coordinates.push(coordinate)
   }
   Ok(coordinates)
 }
@@ -202,15 +267,16 @@ fn WkbReader::read_coordinates(
 fn WkbReader::read_point_geometry(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
 ) -> Result[Geometry, GeoError] {
-  let (x, y) = match self.read_xy(order) {
+  let (x, y, z, m) = match self.read_ordinate_values(order, dimension) {
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  if x.is_nan() && y.is_nan() {
+  if is_empty_point_values(x, y, z, m) {
     return Ok(EmptyPoint)
   }
-  match validate_xy(x, y) {
+  match validate_coordinate_values(x, y, z, m) {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
@@ -218,20 +284,21 @@ fn WkbReader::read_point_geometry(
     Ok(_) => ()
     Err(err) => return Err(err)
   }
-  Ok(Point(Coordinate::xy(x, y)))
+  Ok(Point({ x, y, z, m, }))
 }
 
 ///|
 fn WkbReader::read_line_string_geometry(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
 ) -> Result[Geometry, GeoError] {
   let count = match
     self.read_count_with_order(order, "LINESTRING coordinate count") {
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  let coordinates = match self.read_coordinates(order, count) {
+  let coordinates = match self.read_coordinates(order, dimension, count) {
     Ok(value) => value
     Err(err) => return Err(err)
   }
@@ -242,6 +309,7 @@ fn WkbReader::read_line_string_geometry(
 fn WkbReader::read_polygon_geometry(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
 ) -> Result[Geometry, GeoError] {
   let ring_count = match
     self.read_count_with_order(order, "POLYGON ring count") {
@@ -259,7 +327,7 @@ fn WkbReader::read_polygon_geometry(
     if point_count == 0 {
       return Err(InvalidWkb("polygon ring has no coordinates", count_offset))
     }
-    let ring = match self.read_coordinates(order, point_count) {
+    let ring = match self.read_coordinates(order, dimension, point_count) {
       Ok(value) => value
       Err(err) => return Err(err)
     }
@@ -272,6 +340,7 @@ fn WkbReader::read_polygon_geometry(
 fn WkbReader::read_multi_point_geometry(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -282,9 +351,16 @@ fn WkbReader::read_multi_point_geometry(
   let points : Array[Coordinate] = []
   for _ in 0..<count {
     let component_offset = self.offset
-    let component = match self.read_geometry(depth + 1) {
+    let (component, component_dimension) = match self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
+    }
+    if component_dimension != dimension {
+      return Err(
+        InvalidWkb(
+          "MULTIPOINT component dimension does not match parent", component_offset,
+        ),
+      )
     }
     match component {
       Point(coordinate) => points.push(coordinate)
@@ -307,6 +383,7 @@ fn WkbReader::read_multi_point_geometry(
 fn WkbReader::read_multi_line_string_geometry(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -317,9 +394,16 @@ fn WkbReader::read_multi_line_string_geometry(
   let lines : Array[Array[Coordinate]] = []
   for _ in 0..<count {
     let component_offset = self.offset
-    let component = match self.read_geometry(depth + 1) {
+    let (component, component_dimension) = match self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
+    }
+    if component_dimension != dimension {
+      return Err(
+        InvalidWkb(
+          "MULTILINESTRING component dimension does not match parent", component_offset,
+        ),
+      )
     }
     match component {
       LineString(coordinates) => lines.push(coordinates)
@@ -338,6 +422,7 @@ fn WkbReader::read_multi_line_string_geometry(
 fn WkbReader::read_multi_polygon_geometry(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -348,9 +433,16 @@ fn WkbReader::read_multi_polygon_geometry(
   let polygons : Array[Array[Array[Coordinate]]] = []
   for _ in 0..<count {
     let component_offset = self.offset
-    let component = match self.read_geometry(depth + 1) {
+    let (component, component_dimension) = match self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
+    }
+    if component_dimension != dimension {
+      return Err(
+        InvalidWkb(
+          "MULTIPOLYGON component dimension does not match parent", component_offset,
+        ),
+      )
     }
     match component {
       Polygon(rings) => polygons.push(rings)
@@ -369,6 +461,7 @@ fn WkbReader::read_multi_polygon_geometry(
 fn WkbReader::read_geometry_collection_geometry(
   self : WkbReader,
   order : WkbByteOrder,
+  dimension : CoordinateDimension,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -378,9 +471,17 @@ fn WkbReader::read_geometry_collection_geometry(
   }
   let geometries : Array[Geometry] = []
   for _ in 0..<count {
-    let geometry = match self.read_geometry(depth + 1) {
+    let component_offset = self.offset
+    let (geometry, component_dimension) = match self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
+    }
+    if component_dimension != dimension {
+      return Err(
+        InvalidWkb(
+          "GEOMETRYCOLLECTION component dimension does not match parent", component_offset,
+        ),
+      )
     }
     geometries.push(geometry)
   }
@@ -388,10 +489,27 @@ fn WkbReader::read_geometry_collection_geometry(
 }
 
 ///|
+fn decode_wkb_type(
+  type_code : UInt32,
+) -> Result[(UInt32, CoordinateDimension), GeoError] {
+  if type_code >= 1U && type_code <= 7U {
+    Ok((type_code, Xy))
+  } else if type_code >= 1001U && type_code <= 1007U {
+    Ok((type_code - 1000U, Xyz))
+  } else if type_code >= 2001U && type_code <= 2007U {
+    Ok((type_code - 2000U, Xym))
+  } else if type_code >= 3001U && type_code <= 3007U {
+    Ok((type_code - 3000U, Xyzm))
+  } else {
+    Err(UnsupportedGeometry("WKB type " + type_code.to_string()))
+  }
+}
+
+///|
 fn WkbReader::read_geometry(
   self : WkbReader,
   depth : Int32,
-) -> Result[Geometry, GeoError] {
+) -> Result[(Geometry, CoordinateDimension), GeoError] {
   match self.limits.check_depth(depth) {
     Ok(_) => ()
     Err(err) => return Err(err)
@@ -409,22 +527,30 @@ fn WkbReader::read_geometry(
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  if type_code == 1U {
-    self.read_point_geometry(order)
-  } else if type_code == 2U {
-    self.read_line_string_geometry(order)
-  } else if type_code == 3U {
-    self.read_polygon_geometry(order)
-  } else if type_code == 4U {
-    self.read_multi_point_geometry(order, depth)
-  } else if type_code == 5U {
-    self.read_multi_line_string_geometry(order, depth)
-  } else if type_code == 6U {
-    self.read_multi_polygon_geometry(order, depth)
-  } else if type_code == 7U {
-    self.read_geometry_collection_geometry(order, depth)
+  let (base_code, dimension) = match decode_wkb_type(type_code) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  let geometry = if base_code == 1U {
+    self.read_point_geometry(order, dimension)
+  } else if base_code == 2U {
+    self.read_line_string_geometry(order, dimension)
+  } else if base_code == 3U {
+    self.read_polygon_geometry(order, dimension)
+  } else if base_code == 4U {
+    self.read_multi_point_geometry(order, dimension, depth)
+  } else if base_code == 5U {
+    self.read_multi_line_string_geometry(order, dimension, depth)
+  } else if base_code == 6U {
+    self.read_multi_polygon_geometry(order, dimension, depth)
+  } else if base_code == 7U {
+    self.read_geometry_collection_geometry(order, dimension, depth)
   } else {
     Err(UnsupportedGeometry("WKB type " + type_code.to_string()))
+  }
+  match geometry {
+    Ok(value) => Ok((value, dimension))
+    Err(err) => Err(err)
   }
 }
 
@@ -434,7 +560,7 @@ pub fn parse_wkb(
   limits : GeoLimits,
 ) -> Result[Geometry, GeoError] {
   let reader = WkbReader::new(source, limits)
-  let geometry = match reader.read_geometry(1) {
+  let (geometry, _) = match reader.read_geometry(1) {
     Ok(value) => value
     Err(err) => return Err(err)
   }

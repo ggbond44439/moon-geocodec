@@ -7,8 +7,9 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.7` adds a complete 2D WKB writer with selectable little- or big-endian
-output. Z/M/ZM and EWKB binary support continue in subsequent milestones.
+`0.1.8` completes WKB `Z`, `M`, and `ZM` support across the reader and writer,
+including dimensioned empty geometries. EWKB binary support continues in the
+next milestone.
 
 ## WKT parser
 
@@ -87,11 +88,11 @@ let geometry = match @moon_geocodec.parse_wkb(
 }
 ```
 
-The reader supports WKB 2D `Point`, `LineString`, `Polygon`, `MultiPoint`,
-`MultiLineString`, `MultiPolygon`, and `GeometryCollection` payloads in either
-byte order. Nested geometries may use independent byte order. Truncation,
-invalid type codes, unsupported dimensional variants, trailing bytes, and
-resource-limit violations produce typed errors.
+The reader supports all seven WKB geometry types in `XY`, `XYZ`, `XYM`, and
+`XYZM` forms using both byte orders. Nested geometries may use independent byte
+order, while component dimensions must match their parent. Truncation, invalid
+type codes, dimension mismatches, trailing bytes, and resource-limit violations
+produce typed errors.
 
 ## WKB writer
 
@@ -109,10 +110,11 @@ let big_endian = match @moon_geocodec.format_wkb_with_order(
 }
 ```
 
-`format_wkb` emits little-endian 2D WKB by default. The writer supports all
-seven geometry types, empty geometries, multipart components, and
-`GeometryCollection` recursion. It rejects Z/M/ZM coordinates, non-finite
-ordinates, and empty polygon rings with typed errors.
+`format_wkb` emits little-endian WKB by default. The writer supports all seven
+geometry types in `XY`, `XYZ`, `XYM`, and `XYZM` forms, empty geometries,
+multipart components, and `GeometryCollection` recursion. Dimensioned empty
+children inherit the enclosing geometry dimension. The writer rejects mixed
+dimensions, non-finite ordinates, and empty polygon rings with typed errors.
 
 ## WKT lexer
 
@@ -152,7 +154,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.7
+moon add ggbond44439/moon_geocodec@0.1.8
 ```
 
 ## Build and test

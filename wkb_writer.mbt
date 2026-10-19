@@ -48,23 +48,54 @@ fn WkbWriter::write_f64(self : WkbWriter, value : Double) -> Unit {
 }
 
 ///|
-fn WkbWriter::write_header(self : WkbWriter, type_code : UInt32) -> Unit {
+fn wkb_dimension_offset(dimension : CoordinateDimension) -> UInt32 {
+  match dimension {
+    Xy => 0U
+    Xyz => 1000U
+    Xym => 2000U
+    Xyzm => 3000U
+  }
+}
+
+///|
+fn WkbWriter::write_header(
+  self : WkbWriter,
+  base_code : UInt32,
+  dimension : CoordinateDimension,
+) -> Unit {
   self.write_byte_order()
-  self.write_u32(type_code)
+  self.write_u32(base_code + wkb_dimension_offset(dimension))
 }
 
 ///|
 fn validate_wkb_writer_coordinate(
   coordinate : Coordinate,
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  if coordinate.dimension() != Xy {
-    return Err(InvalidCoordinate("WKB writer supports only XY coordinates"))
+  if coordinate.dimension() != dimension {
+    return Err(
+      InvalidCoordinate("coordinate dimension does not match geometry"),
+    )
   }
   if coordinate.x.is_nan() || coordinate.x.is_inf() {
     return Err(InvalidCoordinate("non-finite x ordinate"))
   }
   if coordinate.y.is_nan() || coordinate.y.is_inf() {
     return Err(InvalidCoordinate("non-finite y ordinate"))
+  }
+  match coordinate.z {
+    Some(value) =>
+      if value.is_nan() || value.is_inf() {
+        return Err(InvalidCoordinate("non-finite z ordinate"))
+      }
+    None => ()
+  }
+  match coordinate.m {
+    Some(value) =>
+      if value.is_nan() || value.is_inf() {
+        return Err(InvalidCoordinate("non-finite m ordinate"))
+      }
+    None => ()
   }
   Ok(())
 }
@@ -73,13 +104,30 @@ fn validate_wkb_writer_coordinate(
 fn WkbWriter::write_coordinate(
   self : WkbWriter,
   coordinate : Coordinate,
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  match validate_wkb_writer_coordinate(coordinate) {
+  match validate_wkb_writer_coordinate(coordinate, dimension) {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
   self.write_f64(coordinate.x)
   self.write_f64(coordinate.y)
+  match dimension {
+    Xyz | Xyzm =>
+      match coordinate.z {
+        Some(value) => self.write_f64(value)
+        None => ()
+      }
+    _ => ()
+  }
+  match dimension {
+    Xym | Xyzm =>
+      match coordinate.m {
+        Some(value) => self.write_f64(value)
+        None => ()
+      }
+    _ => ()
+  }
   Ok(())
 }
 
@@ -87,25 +135,38 @@ fn WkbWriter::write_coordinate(
 fn WkbWriter::write_point_geometry(
   self : WkbWriter,
   coordinate : Coordinate,
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  self.write_header(1U)
-  self.write_coordinate(coordinate)
+  self.write_header(1U, dimension)
+  self.write_coordinate(coordinate, dimension)
 }
 
 ///|
-fn WkbWriter::write_empty_point_geometry(self : WkbWriter) -> Unit {
-  self.write_header(1U)
+fn WkbWriter::write_empty_point_geometry(
+  self : WkbWriter,
+  dimension : CoordinateDimension,
+) -> Unit {
+  self.write_header(1U, dimension)
   self.write_f64(@double.not_a_number)
   self.write_f64(@double.not_a_number)
+  match dimension {
+    Xyz | Xyzm => self.write_f64(@double.not_a_number)
+    _ => ()
+  }
+  match dimension {
+    Xym | Xyzm => self.write_f64(@double.not_a_number)
+    _ => ()
+  }
 }
 
 ///|
 fn WkbWriter::write_coordinates(
   self : WkbWriter,
   coordinates : Array[Coordinate],
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
   for coordinate in coordinates {
-    match self.write_coordinate(coordinate) {
+    match self.write_coordinate(coordinate, dimension) {
       Ok(_) => ()
       Err(err) => return Err(err)
     }
@@ -117,25 +178,27 @@ fn WkbWriter::write_coordinates(
 fn WkbWriter::write_line_string_geometry(
   self : WkbWriter,
   coordinates : Array[Coordinate],
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  self.write_header(2U)
+  self.write_header(2U, dimension)
   self.write_u32(coordinates.length().reinterpret_as_uint())
-  self.write_coordinates(coordinates)
+  self.write_coordinates(coordinates, dimension)
 }
 
 ///|
 fn WkbWriter::write_polygon_geometry(
   self : WkbWriter,
   rings : Array[Array[Coordinate]],
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  self.write_header(3U)
+  self.write_header(3U, dimension)
   self.write_u32(rings.length().reinterpret_as_uint())
   for ring in rings {
     if ring.length() == 0 {
       return Err(InvalidCoordinate("polygon ring has no coordinates"))
     }
     self.write_u32(ring.length().reinterpret_as_uint())
-    match self.write_coordinates(ring) {
+    match self.write_coordinates(ring, dimension) {
       Ok(_) => ()
       Err(err) => return Err(err)
     }
@@ -147,11 +210,12 @@ fn WkbWriter::write_polygon_geometry(
 fn WkbWriter::write_multi_point_geometry(
   self : WkbWriter,
   coordinates : Array[Coordinate],
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  self.write_header(4U)
+  self.write_header(4U, dimension)
   self.write_u32(coordinates.length().reinterpret_as_uint())
   for coordinate in coordinates {
-    match self.write_point_geometry(coordinate) {
+    match self.write_point_geometry(coordinate, dimension) {
       Ok(_) => ()
       Err(err) => return Err(err)
     }
@@ -163,11 +227,12 @@ fn WkbWriter::write_multi_point_geometry(
 fn WkbWriter::write_multi_line_string_geometry(
   self : WkbWriter,
   lines : Array[Array[Coordinate]],
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  self.write_header(5U)
+  self.write_header(5U, dimension)
   self.write_u32(lines.length().reinterpret_as_uint())
   for line in lines {
-    match self.write_line_string_geometry(line) {
+    match self.write_line_string_geometry(line, dimension) {
       Ok(_) => ()
       Err(err) => return Err(err)
     }
@@ -179,11 +244,12 @@ fn WkbWriter::write_multi_line_string_geometry(
 fn WkbWriter::write_multi_polygon_geometry(
   self : WkbWriter,
   polygons : Array[Array[Array[Coordinate]]],
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  self.write_header(6U)
+  self.write_header(6U, dimension)
   self.write_u32(polygons.length().reinterpret_as_uint())
   for polygon in polygons {
-    match self.write_polygon_geometry(polygon) {
+    match self.write_polygon_geometry(polygon, dimension) {
       Ok(_) => ()
       Err(err) => return Err(err)
     }
@@ -195,11 +261,12 @@ fn WkbWriter::write_multi_polygon_geometry(
 fn WkbWriter::write_geometry_collection_geometry(
   self : WkbWriter,
   geometries : Array[Geometry],
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
-  self.write_header(7U)
+  self.write_header(7U, dimension)
   self.write_u32(geometries.length().reinterpret_as_uint())
   for geometry in geometries {
-    match self.write_geometry(geometry) {
+    match self.write_geometry(geometry, dimension) {
       Ok(_) => ()
       Err(err) => return Err(err)
     }
@@ -211,37 +278,47 @@ fn WkbWriter::write_geometry_collection_geometry(
 fn WkbWriter::write_geometry(
   self : WkbWriter,
   geometry : Geometry,
+  dimension : CoordinateDimension,
 ) -> Result[Unit, GeoError] {
   match geometry {
-    Point(coordinate) => self.write_point_geometry(coordinate)
+    Point(coordinate) => self.write_point_geometry(coordinate, dimension)
     EmptyPoint => {
-      self.write_empty_point_geometry()
+      self.write_empty_point_geometry(dimension)
       Ok(())
     }
-    LineString(coordinates) => self.write_line_string_geometry(coordinates)
-    Polygon(rings) => self.write_polygon_geometry(rings)
-    MultiPoint(coordinates) => self.write_multi_point_geometry(coordinates)
-    MultiLineString(lines) => self.write_multi_line_string_geometry(lines)
-    MultiPolygon(polygons) => self.write_multi_polygon_geometry(polygons)
+    LineString(coordinates) =>
+      self.write_line_string_geometry(coordinates, dimension)
+    Polygon(rings) => self.write_polygon_geometry(rings, dimension)
+    MultiPoint(coordinates) =>
+      self.write_multi_point_geometry(coordinates, dimension)
+    MultiLineString(lines) =>
+      self.write_multi_line_string_geometry(lines, dimension)
+    MultiPolygon(polygons) =>
+      self.write_multi_polygon_geometry(polygons, dimension)
     GeometryCollection(geometries) =>
-      self.write_geometry_collection_geometry(geometries)
+      self.write_geometry_collection_geometry(geometries, dimension)
   }
 }
 
 ///|
-/// Serializes a geometry as little-endian 2D WKB.
+/// Serializes a geometry as little-endian WKB.
 pub fn format_wkb(geometry : Geometry) -> Result[Bytes, GeoError] {
   format_wkb_with_order(geometry, LittleEndian)
 }
 
 ///|
-/// Serializes a geometry as 2D WKB using the requested byte order.
+/// Serializes a geometry as WKB using the requested byte order.
 pub fn format_wkb_with_order(
   geometry : Geometry,
   order : WkbByteOrder,
 ) -> Result[Bytes, GeoError] {
+  let dimension = match geometry_dimension_summary(geometry) {
+    Uniform(value) => value
+    NoDimension => Xy
+    Mixed => return Err(InvalidCoordinate("inconsistent coordinate dimensions"))
+  }
   let writer = WkbWriter::new(order)
-  match writer.write_geometry(geometry) {
+  match writer.write_geometry(geometry, dimension) {
     Ok(_) => Ok(Bytes::from_array(writer.bytes))
     Err(err) => Err(err)
   }
