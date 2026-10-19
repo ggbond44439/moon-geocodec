@@ -7,9 +7,9 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.5` adds dedicated WKT 2 parsing and formatting plus EWKT SRID support
-through reusable `SpatialGeometry` metadata. WKT, WKB, EWKB, and GeoJSON codecs
-continue to be developed in subsequent milestones.
+`0.1.6` adds a bounded 2D WKB reader with little- and big-endian support for
+all seven basic geometry types. Z/M/ZM, EWKB, and the WKB writer continue in
+subsequent milestones.
 
 ## WKT parser
 
@@ -76,6 +76,24 @@ outside the current geometry model are reported as `UnsupportedGeometry`.
 EWKT SRIDs are optional, must be non-negative, and are stored separately from
 the geometry.
 
+## WKB reader
+
+```moonbit
+let geometry = match @moon_geocodec.parse_wkb(
+  bytes.exact_view(),
+  @moon_geocodec.GeoLimits::default(),
+) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+```
+
+The reader supports WKB 2D `Point`, `LineString`, `Polygon`, `MultiPoint`,
+`MultiLineString`, `MultiPolygon`, and `GeometryCollection` payloads in either
+byte order. Nested geometries may use independent byte order. Truncation,
+invalid type codes, unsupported dimensional variants, trailing bytes, and
+resource-limit violations produce typed errors.
+
 ## WKT lexer
 
 ```moonbit
@@ -114,7 +132,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.5
+moon add ggbond44439/moon_geocodec@0.1.6
 ```
 
 ## Build and test

@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.5"
+pub const VERSION : String = "0.1.6"
 
 pub fn format_ewkt(SpatialGeometry) -> Result[String, GeoError]
 
@@ -15,6 +15,8 @@ pub fn format_wkt(Geometry) -> Result[String, GeoError]
 pub fn format_wkt2(Geometry) -> Result[String, GeoError]
 
 pub fn parse_ewkt(StringView, GeoLimits) -> Result[SpatialGeometry, GeoError]
+
+pub fn parse_wkb(BytesView, GeoLimits) -> Result[Geometry, GeoError]
 
 pub fn parse_wkt(StringView, GeoLimits) -> Result[Geometry, GeoError]
 
