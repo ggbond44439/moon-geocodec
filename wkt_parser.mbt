@@ -4,11 +4,12 @@ priv struct WktParser {
   mut index : Int32
   limits : GeoLimits
   mut coordinate_count : Int32
+  mut geometry_count : Int32
 }
 
 ///|
 fn WktParser::new(tokens : Array[WktToken], limits : GeoLimits) -> WktParser {
-  { tokens, index: 0, limits, coordinate_count: 0, }
+  { tokens, index: 0, limits, coordinate_count: 0, geometry_count: 0, }
 }
 
 ///|
@@ -33,23 +34,23 @@ fn WktParser::current_is_word(self : WktParser, expected : String) -> Bool {
 }
 
 ///|
-fn WktParser::take_dimension(self : WktParser) -> CoordinateDimension {
+fn WktParser::take_dimension_suffix(self : WktParser) -> CoordinateDimension? {
   let token = self.current()
   if token.kind == Word {
     if word_matches(token.text, "ZM") {
       self.advance()
-      Xyzm
+      Some(Xyzm)
     } else if word_matches(token.text, "Z") {
       self.advance()
-      Xyz
+      Some(Xyz)
     } else if word_matches(token.text, "M") {
       self.advance()
-      Xym
+      Some(Xym)
     } else {
-      Xy
+      None
     }
   } else {
-    Xy
+    None
   }
 }
 
@@ -235,6 +236,205 @@ fn WktParser::parse_polygon_geometry(
 }
 
 ///|
+fn WktParser::parse_multi_point_geometry(
+  self : WktParser,
+  dimension : CoordinateDimension,
+) -> Result[Geometry, GeoError] {
+  match self.expect_kind(LParen, "expected '(' after MULTIPOINT") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  let points : Array[Coordinate] = []
+  let wrapped = self.current().kind == LParen
+  while true {
+    let coordinate = if wrapped {
+      match
+        self.expect_kind(LParen, "expected '(' before MULTIPOINT coordinate") {
+        Ok(_) => ()
+        Err(err) => return Err(err)
+      }
+      let coordinate = match self.parse_coordinate(dimension) {
+        Ok(value) => value
+        Err(err) => return Err(err)
+      }
+      match
+        self.expect_kind(RParen, "expected ')' after MULTIPOINT coordinate") {
+        Ok(_) => ()
+        Err(err) => return Err(err)
+      }
+      coordinate
+    } else {
+      match self.parse_coordinate(dimension) {
+        Ok(value) => value
+        Err(err) => return Err(err)
+      }
+    }
+    points.push(coordinate)
+    if self.current().kind == Comma {
+      self.advance()
+      if wrapped && self.current().kind != LParen {
+        return Err(
+          InvalidWkt(
+            "expected '(' before MULTIPOINT coordinate",
+            self.current().offset,
+          ),
+        )
+      }
+      if !wrapped && self.current().kind == LParen {
+        return Err(
+          InvalidWkt("mixed MULTIPOINT coordinate forms", self.current().offset),
+        )
+      }
+    } else {
+      break
+    }
+  }
+  match self.expect_kind(RParen, "expected ')' after MULTIPOINT coordinates") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  Ok(MultiPoint(points))
+}
+
+///|
+fn WktParser::parse_multi_line_string_geometry(
+  self : WktParser,
+  dimension : CoordinateDimension,
+) -> Result[Geometry, GeoError] {
+  match self.expect_kind(LParen, "expected '(' after MULTILINESTRING") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  let lines : Array[Array[Coordinate]] = []
+  while true {
+    match
+      self.expect_kind(LParen, "expected '(' before MULTILINESTRING component") {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    let coordinates = match self.parse_coordinate_list(dimension) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    match
+      self.expect_kind(RParen, "expected ')' after MULTILINESTRING component") {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    lines.push(coordinates)
+    if self.current().kind == Comma {
+      self.advance()
+    } else {
+      break
+    }
+  }
+  match
+    self.expect_kind(RParen, "expected ')' after MULTILINESTRING coordinates") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  Ok(MultiLineString(lines))
+}
+
+///|
+fn WktParser::parse_multi_polygon_geometry(
+  self : WktParser,
+  dimension : CoordinateDimension,
+) -> Result[Geometry, GeoError] {
+  match self.expect_kind(LParen, "expected '(' after MULTIPOLYGON") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  let polygons : Array[Array[Array[Coordinate]]] = []
+  while true {
+    match self.expect_kind(LParen, "expected '(' before MULTIPOLYGON polygon") {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    let rings : Array[Array[Coordinate]] = []
+    while true {
+      let ring = match self.parse_ring(dimension) {
+        Ok(value) => value
+        Err(err) => return Err(err)
+      }
+      rings.push(ring)
+      if self.current().kind == Comma {
+        self.advance()
+      } else {
+        break
+      }
+    }
+    match self.expect_kind(RParen, "expected ')' after MULTIPOLYGON polygon") {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    polygons.push(rings)
+    if self.current().kind == Comma {
+      self.advance()
+    } else {
+      break
+    }
+  }
+  match self.expect_kind(RParen, "expected ')' after MULTIPOLYGON polygons") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  Ok(MultiPolygon(polygons))
+}
+
+///|
+fn WktParser::parse_geometry_collection_geometry(
+  self : WktParser,
+  dimension : CoordinateDimension?,
+  depth : Int32,
+) -> Result[Geometry, GeoError] {
+  match self.expect_kind(LParen, "expected '(' after GEOMETRYCOLLECTION") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  let geometries : Array[Geometry] = []
+  while true {
+    let geometry = match self.parse_geometry(dimension, depth) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    geometries.push(geometry)
+    if self.current().kind == Comma {
+      self.advance()
+    } else {
+      break
+    }
+  }
+  match
+    self.expect_kind(RParen, "expected ')' after GEOMETRYCOLLECTION members") {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  Ok(GeometryCollection(geometries))
+}
+
+///|
+fn geometry_kind_from_name(name : String) -> GeometryKind? {
+  if word_matches(name, "POINT") {
+    Some(Point)
+  } else if word_matches(name, "LINESTRING") {
+    Some(LineString)
+  } else if word_matches(name, "POLYGON") {
+    Some(Polygon)
+  } else if word_matches(name, "MULTIPOINT") {
+    Some(MultiPoint)
+  } else if word_matches(name, "MULTILINESTRING") {
+    Some(MultiLineString)
+  } else if word_matches(name, "MULTIPOLYGON") {
+    Some(MultiPolygon)
+  } else if word_matches(name, "GEOMETRYCOLLECTION") {
+    Some(GeometryCollection)
+  } else {
+    None
+  }
+}
+
+///|
 fn WktParser::finish(
   self : WktParser,
   geometry : Geometry,
@@ -248,54 +448,104 @@ fn WktParser::finish(
 }
 
 ///|
-fn WktParser::parse_geometry(self : WktParser) -> Result[Geometry, GeoError] {
+fn WktParser::parse_geometry(
+  self : WktParser,
+  inherited_dimension : CoordinateDimension?,
+  depth : Int32,
+) -> Result[Geometry, GeoError] {
+  match self.limits.check_depth(depth) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
+  self.geometry_count += 1
+  match self.limits.check_geometries(self.geometry_count) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
   let header = self.current()
   if header.kind != Word {
     return Err(InvalidWkt("expected geometry type", header.offset))
   }
   self.advance()
   let name = header.text
-  let dimension = self.take_dimension()
-  let is_point = word_matches(name, "POINT")
-  let is_line_string = word_matches(name, "LINESTRING")
-  let is_polygon = word_matches(name, "POLYGON")
-  if !(is_point || is_line_string || is_polygon) {
-    if word_matches(name, "MULTIPOINT") ||
-      word_matches(name, "MULTILINESTRING") ||
-      word_matches(name, "MULTIPOLYGON") ||
-      word_matches(name, "GEOMETRYCOLLECTION") {
-      return Err(UnsupportedGeometry(name))
-    }
-    return Err(InvalidWkt("unknown geometry type", header.offset))
+  let suffix_token = self.current()
+  let suffix = self.take_dimension_suffix()
+  let declared_dimension : CoordinateDimension? = match
+    (inherited_dimension, suffix) {
+    (Some(parent), Some(child)) =>
+      if parent == child {
+        Some(parent)
+      } else {
+        return Err(
+          InvalidWkt(
+            "dimension suffix conflicts with enclosing geometry",
+            suffix_token.offset,
+          ),
+        )
+      }
+    (Some(parent), None) => Some(parent)
+    (None, Some(child)) => Some(child)
+    (None, None) => None
+  }
+  let dimension = match declared_dimension {
+    Some(value) => value
+    None => Xy
+  }
+  let kind = match geometry_kind_from_name(name) {
+    Some(value) => value
+    None => return Err(InvalidWkt("unknown geometry type", header.offset))
   }
   if self.current_is_word("EMPTY") {
     self.advance()
-    let geometry = if is_point {
-      EmptyPoint
-    } else if is_line_string {
-      LineString([])
-    } else {
-      Polygon([])
+    let geometry = match kind {
+      Point => EmptyPoint
+      LineString => LineString([])
+      Polygon => Polygon([])
+      MultiPoint => MultiPoint([])
+      MultiLineString => MultiLineString([])
+      MultiPolygon => MultiPolygon([])
+      GeometryCollection => GeometryCollection([])
     }
-    return self.finish(geometry)
+    return Ok(geometry)
   }
-  let geometry = if is_point {
-    match self.parse_point_geometry(dimension) {
-      Ok(value) => value
-      Err(err) => return Err(err)
-    }
-  } else if is_line_string {
-    match self.parse_line_string_geometry(dimension) {
-      Ok(value) => value
-      Err(err) => return Err(err)
-    }
-  } else {
-    match self.parse_polygon_geometry(dimension) {
-      Ok(value) => value
-      Err(err) => return Err(err)
-    }
+  match kind {
+    Point =>
+      match self.parse_point_geometry(dimension) {
+        Ok(value) => Ok(value)
+        Err(err) => Err(err)
+      }
+    LineString =>
+      match self.parse_line_string_geometry(dimension) {
+        Ok(value) => Ok(value)
+        Err(err) => Err(err)
+      }
+    Polygon =>
+      match self.parse_polygon_geometry(dimension) {
+        Ok(value) => Ok(value)
+        Err(err) => Err(err)
+      }
+    MultiPoint =>
+      match self.parse_multi_point_geometry(dimension) {
+        Ok(value) => Ok(value)
+        Err(err) => Err(err)
+      }
+    MultiLineString =>
+      match self.parse_multi_line_string_geometry(dimension) {
+        Ok(value) => Ok(value)
+        Err(err) => Err(err)
+      }
+    MultiPolygon =>
+      match self.parse_multi_polygon_geometry(dimension) {
+        Ok(value) => Ok(value)
+        Err(err) => Err(err)
+      }
+    GeometryCollection =>
+      match
+        self.parse_geometry_collection_geometry(declared_dimension, depth + 1) {
+        Ok(value) => Ok(value)
+        Err(err) => Err(err)
+      }
   }
-  self.finish(geometry)
 }
 
 ///|
@@ -303,17 +553,14 @@ pub fn parse_wkt(
   source : StringView,
   limits : GeoLimits,
 ) -> Result[Geometry, GeoError] {
-  match limits.check_geometries(1) {
-    Ok(_) => ()
-    Err(err) => return Err(err)
-  }
-  match limits.check_depth(1) {
-    Ok(_) => ()
-    Err(err) => return Err(err)
-  }
   let tokens = match tokenize_wkt(source, limits) {
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  WktParser::new(tokens, limits).parse_geometry()
+  let parser = WktParser::new(tokens, limits)
+  let geometry = match parser.parse_geometry(None, 1) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  parser.finish(geometry)
 }

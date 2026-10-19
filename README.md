@@ -7,9 +7,10 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.2` adds a bounded WKT 1 parser for `POINT`, `LINESTRING`, and `POLYGON`,
-including `Z`, `M`, `ZM`, and `EMPTY` forms. WKT, WKB, EWKB, and GeoJSON codecs
-continue to be developed in subsequent milestones.
+`0.1.3` completes bounded WKT 1 parsing for all seven simple-feature geometry
+types, including multi-geometries, nested geometry collections, `Z`, `M`, `ZM`,
+and `EMPTY` forms. WKT, WKB, EWKB, and GeoJSON codecs continue to be developed
+in subsequent milestones.
 
 ## WKT parser
 
@@ -25,8 +26,8 @@ assert_eq(geometry.kind(), @moon_geocodec.GeometryKind::Polygon)
 ```
 
 The parser reports malformed syntax as `GeoError::InvalidWkt` with a source
-offset, rejects inconsistent coordinate dimensions, and enforces coordinate
-limits while reading.
+offset, rejects inconsistent coordinate dimensions, and enforces coordinate,
+geometry-count, and collection-depth limits while reading.
 
 ## WKT lexer
 
@@ -66,7 +67,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.2
+moon add ggbond44439/moon_geocodec@0.1.3
 ```
 
 ## Build and test
