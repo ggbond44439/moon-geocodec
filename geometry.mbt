@@ -101,6 +101,7 @@ pub fn BoundingBox::height(self : BoundingBox) -> Double {
 /// Typed geometry model independent of text and binary encodings.
 pub(all) enum Geometry {
   Point(Coordinate)
+  EmptyPoint
   LineString(Array[Coordinate])
   Polygon(Array[Array[Coordinate]])
   MultiPoint(Array[Coordinate])
@@ -113,6 +114,7 @@ pub(all) enum Geometry {
 pub fn Geometry::kind(self : Geometry) -> GeometryKind {
   match self {
     Point(_) => Point
+    EmptyPoint => Point
     LineString(_) => LineString
     Polygon(_) => Polygon
     MultiPoint(_) => MultiPoint
@@ -126,6 +128,7 @@ pub fn Geometry::kind(self : Geometry) -> GeometryKind {
 pub fn Geometry::coordinate_count(self : Geometry) -> Int32 {
   match self {
     Point(_) => 1
+    EmptyPoint => 0
     LineString(points) => points.length()
     Polygon(rings) => coordinate_count_rings(rings)
     MultiPoint(points) => points.length()
@@ -175,6 +178,7 @@ pub fn Geometry::is_empty(self : Geometry) -> Bool {
 pub fn Geometry::bounds(self : Geometry) -> BoundingBox? {
   match self {
     Point(coordinate) => Some(point_bounds(coordinate))
+    EmptyPoint => None
     LineString(points) => bounds_from_coordinates(points)
     Polygon(rings) => bounds_from_rings(rings)
     MultiPoint(points) => bounds_from_coordinates(points)

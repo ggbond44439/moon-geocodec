@@ -6,7 +6,9 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.1"
+pub const VERSION : String = "0.1.2"
+
+pub fn parse_wkt(StringView, GeoLimits) -> Result[Geometry, GeoError]
 
 pub fn tokenize_wkt(StringView, GeoLimits) -> Result[Array[WktToken], GeoError]
 
@@ -92,6 +94,7 @@ pub fn GeoLimits::with_token_limit(Self, Int) -> Result[Self, GeoError]
 
 pub(all) enum Geometry {
   Point(Coordinate)
+  EmptyPoint
   LineString(Array[Coordinate])
   Polygon(Array[Array[Coordinate]])
   MultiPoint(Array[Coordinate])
