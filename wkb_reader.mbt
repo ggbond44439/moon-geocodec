@@ -1,8 +1,8 @@
 ///|
-priv enum ByteOrder {
+pub(all) enum WkbByteOrder {
   LittleEndian
   BigEndian
-}
+} derive(Eq, @debug.Debug)
 
 ///|
 priv struct WkbReader {
@@ -34,7 +34,9 @@ fn WkbReader::read_byte(
 }
 
 ///|
-fn WkbReader::read_byte_order(self : WkbReader) -> Result[ByteOrder, GeoError] {
+fn WkbReader::read_byte_order(
+  self : WkbReader,
+) -> Result[WkbByteOrder, GeoError] {
   let offset = self.offset
   let value = match self.read_byte("byte order") {
     Ok(value) => value
@@ -50,7 +52,7 @@ fn WkbReader::read_byte_order(self : WkbReader) -> Result[ByteOrder, GeoError] {
 ///|
 fn WkbReader::read_u32(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   context : String,
 ) -> Result[UInt32, GeoError] {
   let b0 = match self.read_byte(context) {
@@ -90,7 +92,7 @@ fn WkbReader::read_u32(
 ///|
 fn WkbReader::read_f64(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   context : String,
 ) -> Result[Double, GeoError] {
   let mut bits : UInt64 = 0UL
@@ -118,7 +120,7 @@ fn WkbReader::read_f64(
 ///|
 fn WkbReader::read_count_with_order(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   context : String,
 ) -> Result[Int32, GeoError] {
   let offset = self.offset
@@ -153,7 +155,7 @@ fn validate_xy(x : Double, y : Double) -> Result[Unit, GeoError] {
 ///|
 fn WkbReader::read_xy(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
 ) -> Result[(Double, Double), GeoError] {
   let x = match self.read_f64(order, "x ordinate") {
     Ok(value) => value
@@ -169,7 +171,7 @@ fn WkbReader::read_xy(
 ///|
 fn WkbReader::read_coordinates(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   count : Int32,
 ) -> Result[Array[Coordinate], GeoError] {
   if count > self.limits.max_coordinates {
@@ -199,7 +201,7 @@ fn WkbReader::read_coordinates(
 ///|
 fn WkbReader::read_point_geometry(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
 ) -> Result[Geometry, GeoError] {
   let (x, y) = match self.read_xy(order) {
     Ok(value) => value
@@ -222,7 +224,7 @@ fn WkbReader::read_point_geometry(
 ///|
 fn WkbReader::read_line_string_geometry(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
 ) -> Result[Geometry, GeoError] {
   let count = match
     self.read_count_with_order(order, "LINESTRING coordinate count") {
@@ -239,7 +241,7 @@ fn WkbReader::read_line_string_geometry(
 ///|
 fn WkbReader::read_polygon_geometry(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
 ) -> Result[Geometry, GeoError] {
   let ring_count = match
     self.read_count_with_order(order, "POLYGON ring count") {
@@ -269,7 +271,7 @@ fn WkbReader::read_polygon_geometry(
 ///|
 fn WkbReader::read_multi_point_geometry(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -304,7 +306,7 @@ fn WkbReader::read_multi_point_geometry(
 ///|
 fn WkbReader::read_multi_line_string_geometry(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -335,7 +337,7 @@ fn WkbReader::read_multi_line_string_geometry(
 ///|
 fn WkbReader::read_multi_polygon_geometry(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -366,7 +368,7 @@ fn WkbReader::read_multi_polygon_geometry(
 ///|
 fn WkbReader::read_geometry_collection_geometry(
   self : WkbReader,
-  order : ByteOrder,
+  order : WkbByteOrder,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -442,3 +444,9 @@ pub fn parse_wkb(
     Ok(geometry)
   }
 }
+
+///|
+pub extend WkbByteOrder with Eq::{not_equal, equal}
+
+///|
+pub extend WkbByteOrder with @debug.Debug::{to_repr}

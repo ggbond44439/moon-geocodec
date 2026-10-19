@@ -7,9 +7,8 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.6` adds a bounded 2D WKB reader with little- and big-endian support for
-all seven basic geometry types. Z/M/ZM, EWKB, and the WKB writer continue in
-subsequent milestones.
+`0.1.7` adds a complete 2D WKB writer with selectable little- or big-endian
+output. Z/M/ZM and EWKB binary support continue in subsequent milestones.
 
 ## WKT parser
 
@@ -94,6 +93,27 @@ byte order. Nested geometries may use independent byte order. Truncation,
 invalid type codes, unsupported dimensional variants, trailing bytes, and
 resource-limit violations produce typed errors.
 
+## WKB writer
+
+```moonbit
+let bytes = match @moon_geocodec.format_wkb(geometry) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+let big_endian = match @moon_geocodec.format_wkb_with_order(
+  geometry,
+  @moon_geocodec.WkbByteOrder::BigEndian,
+) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+```
+
+`format_wkb` emits little-endian 2D WKB by default. The writer supports all
+seven geometry types, empty geometries, multipart components, and
+`GeometryCollection` recursion. It rejects Z/M/ZM coordinates, non-finite
+ordinates, and empty polygon rings with typed errors.
+
 ## WKT lexer
 
 ```moonbit
@@ -132,7 +152,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.6
+moon add ggbond44439/moon_geocodec@0.1.7
 ```
 
 ## Build and test
