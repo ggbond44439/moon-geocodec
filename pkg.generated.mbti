@@ -6,7 +6,9 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.3"
+pub const VERSION : String = "0.1.4"
+
+pub fn format_wkt(Geometry) -> Result[String, GeoError]
 
 pub fn parse_wkt(StringView, GeoLimits) -> Result[Geometry, GeoError]
 
