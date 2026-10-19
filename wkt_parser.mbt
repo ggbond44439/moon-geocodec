@@ -1,15 +1,27 @@
 ///|
+priv enum WktDialect {
+  Wkt1
+  Wkt2
+} derive(Eq)
+
+///|
 priv struct WktParser {
   tokens : Array[WktToken]
   mut index : Int32
   limits : GeoLimits
+  dialect : WktDialect
   mut coordinate_count : Int32
   mut geometry_count : Int32
 }
 
 ///|
-fn WktParser::new(tokens : Array[WktToken], limits : GeoLimits) -> WktParser {
-  { tokens, index: 0, limits, coordinate_count: 0, geometry_count: 0, }
+fn WktParser::new(
+  tokens : Array[WktToken],
+  limits : GeoLimits,
+  dialect : WktDialect,
+  index : Int32,
+) -> WktParser {
+  { tokens, index, limits, dialect, coordinate_count: 0, geometry_count: 0, }
 }
 
 ///|
@@ -246,6 +258,14 @@ fn WktParser::parse_multi_point_geometry(
   }
   let points : Array[Coordinate] = []
   let wrapped = self.current().kind == LParen
+  if self.dialect == Wkt2 && !wrapped {
+    return Err(
+      InvalidWkt(
+        "WKT2 requires parenthesized MULTIPOINT coordinates",
+        self.current().offset,
+      ),
+    )
+  }
   while true {
     let coordinate = if wrapped {
       match
@@ -435,6 +455,20 @@ fn geometry_kind_from_name(name : String) -> GeometryKind? {
 }
 
 ///|
+fn is_unsupported_wkt2_geometry(name : String) -> Bool {
+  word_matches(name, "CIRCULARSTRING") ||
+  word_matches(name, "COMPOUNDCURVE") ||
+  word_matches(name, "CURVEPOLYGON") ||
+  word_matches(name, "MULTICURVE") ||
+  word_matches(name, "MULTISURFACE") ||
+  word_matches(name, "CURVE") ||
+  word_matches(name, "SURFACE") ||
+  word_matches(name, "POLYHEDRALSURFACE") ||
+  word_matches(name, "TIN") ||
+  word_matches(name, "TRIANGLE")
+}
+
+///|
 fn WktParser::finish(
   self : WktParser,
   geometry : Geometry,
@@ -493,7 +527,12 @@ fn WktParser::parse_geometry(
   }
   let kind = match geometry_kind_from_name(name) {
     Some(value) => value
-    None => return Err(InvalidWkt("unknown geometry type", header.offset))
+    None => {
+      if self.dialect == Wkt2 && is_unsupported_wkt2_geometry(name) {
+        return Err(UnsupportedGeometry(name))
+      }
+      return Err(InvalidWkt("unknown geometry type", header.offset))
+    }
   }
   if self.current_is_word("EMPTY") {
     self.advance()
@@ -549,18 +588,93 @@ fn WktParser::parse_geometry(
 }
 
 ///|
-pub fn parse_wkt(
+fn parse_wkt_dialect(
   source : StringView,
   limits : GeoLimits,
+  dialect : WktDialect,
 ) -> Result[Geometry, GeoError] {
   let tokens = match tokenize_wkt(source, limits) {
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  let parser = WktParser::new(tokens, limits)
+  let parser = WktParser::new(tokens, limits, dialect, 0)
   let geometry = match parser.parse_geometry(None, 1) {
     Ok(value) => value
     Err(err) => return Err(err)
   }
   parser.finish(geometry)
+}
+
+///|
+pub fn parse_wkt(
+  source : StringView,
+  limits : GeoLimits,
+) -> Result[Geometry, GeoError] {
+  parse_wkt_dialect(source, limits, Wkt1)
+}
+
+///|
+pub fn parse_wkt2(
+  source : StringView,
+  limits : GeoLimits,
+) -> Result[Geometry, GeoError] {
+  parse_wkt_dialect(source, limits, Wkt2)
+}
+
+///|
+fn parse_srid_number(token : WktToken) -> Result[Int32, GeoError] {
+  let value = @string.parse_int(token.text.view()) catch {
+    _ => return Err(InvalidWkt("invalid SRID", token.offset))
+  }
+  if value < 0 {
+    Err(InvalidSrid(value))
+  } else {
+    Ok(value)
+  }
+}
+
+///|
+pub fn parse_ewkt(
+  source : StringView,
+  limits : GeoLimits,
+) -> Result[SpatialGeometry, GeoError] {
+  let tokens = match tokenize_wkt(source, limits) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  let mut index = 0
+  let mut srid : Int32? = None
+  let first = tokens[0]
+  if first.kind == Word && word_matches(first.text, "SRID") {
+    index = 1
+    let equals = tokens[index]
+    if equals.kind != Equals {
+      return Err(InvalidWkt("expected '=' after SRID", equals.offset))
+    }
+    index += 1
+    let number = tokens[index]
+    if number.kind != Number {
+      return Err(InvalidWkt("expected SRID number", number.offset))
+    }
+    let value = match parse_srid_number(number) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    srid = Some(value)
+    index += 1
+    let semicolon = tokens[index]
+    if semicolon.kind != Semicolon {
+      return Err(InvalidWkt("expected ';' after SRID", semicolon.offset))
+    }
+    index += 1
+  }
+  let parser = WktParser::new(tokens, limits, Wkt1, index)
+  let geometry = match parser.parse_geometry(None, 1) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  match parser.finish(geometry) {
+    Ok(value) => Ok({ srid, geometry: value, })
+    Err(err) => Err(err)
+  }
 }

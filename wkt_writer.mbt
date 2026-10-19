@@ -338,10 +338,39 @@ fn write_polygon_geometry(
 }
 
 ///|
+fn write_multi_point_coordinates(
+  builder : StringBuilder,
+  coordinates : Array[Coordinate],
+  dimension : CoordinateDimension,
+  wrapped : Bool,
+) -> Result[Unit, GeoError] {
+  let mut first = true
+  for coordinate in coordinates {
+    match validate_coordinate(coordinate, dimension) {
+      Ok(_) => ()
+      Err(err) => return Err(err)
+    }
+    if !first {
+      builder.write_string(", ")
+    }
+    if wrapped {
+      builder.write_string("(")
+    }
+    write_coordinate_tuple(builder, coordinate, dimension)
+    if wrapped {
+      builder.write_string(")")
+    }
+    first = false
+  }
+  Ok(())
+}
+
+///|
 fn write_multi_point_geometry(
   builder : StringBuilder,
   coordinates : Array[Coordinate],
   inherited_dimension : CoordinateDimension?,
+  dialect : WktDialect,
 ) -> Result[Unit, GeoError] {
   if coordinates.length() == 0 {
     write_empty_geometry(builder, "MULTIPOINT")
@@ -358,7 +387,13 @@ fn write_multi_point_geometry(
     Err(err) => return Err(err)
   }
   builder.write_string(" (")
-  match write_coordinate_list(builder, coordinates, dimension) {
+  match
+    write_multi_point_coordinates(
+      builder,
+      coordinates,
+      dimension,
+      dialect == Wkt2,
+    ) {
     Ok(_) => ()
     Err(err) => return Err(err)
   }
@@ -465,6 +500,7 @@ fn write_geometry_collection_geometry(
   builder : StringBuilder,
   geometries : Array[Geometry],
   inherited_dimension : CoordinateDimension?,
+  dialect : WktDialect,
 ) -> Result[Unit, GeoError] {
   if geometries.length() == 0 {
     write_empty_geometry(builder, "GEOMETRYCOLLECTION")
@@ -504,7 +540,7 @@ fn write_geometry_collection_geometry(
     if !first {
       builder.write_string(", ")
     }
-    match write_geometry(builder, geometry, child_dimension) {
+    match write_geometry(builder, geometry, child_dimension, dialect) {
       Ok(_) => ()
       Err(err) => return Err(err)
     }
@@ -519,6 +555,7 @@ fn write_geometry(
   builder : StringBuilder,
   geometry : Geometry,
   inherited_dimension : CoordinateDimension?,
+  dialect : WktDialect,
 ) -> Result[Unit, GeoError] {
   match geometry {
     Point(coordinate) =>
@@ -532,24 +569,58 @@ fn write_geometry(
     Polygon(rings) =>
       write_polygon_geometry(builder, rings, inherited_dimension)
     MultiPoint(coordinates) =>
-      write_multi_point_geometry(builder, coordinates, inherited_dimension)
+      write_multi_point_geometry(
+        builder, coordinates, inherited_dimension, dialect,
+      )
     MultiLineString(lines) =>
       write_multi_line_string_geometry(builder, lines, inherited_dimension)
     MultiPolygon(polygons) =>
       write_multi_polygon_geometry(builder, polygons, inherited_dimension)
     GeometryCollection(geometries) =>
       write_geometry_collection_geometry(
-        builder, geometries, inherited_dimension,
+        builder, geometries, inherited_dimension, dialect,
       )
+  }
+}
+
+///|
+fn format_wkt_dialect(
+  geometry : Geometry,
+  dialect : WktDialect,
+) -> Result[String, GeoError] {
+  let builder = StringBuilder()
+  match write_geometry(builder, geometry, None, dialect) {
+    Ok(_) => Ok(builder.to_string())
+    Err(err) => Err(err)
   }
 }
 
 ///|
 /// Serializes a geometry as canonical WKT 1.
 pub fn format_wkt(geometry : Geometry) -> Result[String, GeoError] {
-  let builder = StringBuilder()
-  match write_geometry(builder, geometry, None) {
-    Ok(_) => Ok(builder.to_string())
-    Err(err) => Err(err)
+  format_wkt_dialect(geometry, Wkt1)
+}
+
+///|
+/// Serializes a geometry as canonical WKT 2.
+pub fn format_wkt2(geometry : Geometry) -> Result[String, GeoError] {
+  format_wkt_dialect(geometry, Wkt2)
+}
+
+///|
+/// Serializes a geometry with an optional EWKT SRID prefix.
+pub fn format_ewkt(value : SpatialGeometry) -> Result[String, GeoError] {
+  let text = match format_wkt(value.geometry) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  match value.srid {
+    Some(srid) =>
+      if srid < 0 {
+        Err(InvalidSrid(srid))
+      } else {
+        Ok("SRID=" + srid.to_string() + ";" + text)
+      }
+    None => Ok(text)
   }
 }

@@ -6,11 +6,19 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.4"
+pub const VERSION : String = "0.1.5"
+
+pub fn format_ewkt(SpatialGeometry) -> Result[String, GeoError]
 
 pub fn format_wkt(Geometry) -> Result[String, GeoError]
 
+pub fn format_wkt2(Geometry) -> Result[String, GeoError]
+
+pub fn parse_ewkt(StringView, GeoLimits) -> Result[SpatialGeometry, GeoError]
+
 pub fn parse_wkt(StringView, GeoLimits) -> Result[Geometry, GeoError]
+
+pub fn parse_wkt2(StringView, GeoLimits) -> Result[Geometry, GeoError]
 
 pub fn tokenize_wkt(StringView, GeoLimits) -> Result[Array[WktToken], GeoError]
 
@@ -124,6 +132,15 @@ pub(all) enum GeometryKind {
 pub fn GeometryKind::equal(Self, Self) -> Bool
 pub fn GeometryKind::not_equal(Self, Self) -> Bool
 pub fn GeometryKind::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SpatialGeometry {
+  srid : Int?
+  geometry : Geometry
+} derive(Eq, @debug.Debug)
+pub fn SpatialGeometry::equal(Self, Self) -> Bool
+pub fn SpatialGeometry::new(Geometry, Int?) -> Result[Self, GeoError]
+pub fn SpatialGeometry::not_equal(Self, Self) -> Bool
+pub fn SpatialGeometry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WktToken {
   kind : WktTokenKind

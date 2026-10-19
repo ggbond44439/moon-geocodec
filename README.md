@@ -7,10 +7,9 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.4` adds canonical WKT 1 serialization with stable spacing, dimension
-suffixes, shortest round-trip number formatting, and validation of non-finite
-or inconsistent coordinates. WKT, WKB, EWKB, and GeoJSON codecs continue to be
-developed in subsequent milestones.
+`0.1.5` adds dedicated WKT 2 parsing and formatting plus EWKT SRID support
+through reusable `SpatialGeometry` metadata. WKT, WKB, EWKB, and GeoJSON codecs
+continue to be developed in subsequent milestones.
 
 ## WKT parser
 
@@ -42,6 +41,40 @@ assert_eq(text, "POLYGON ((0 0, 1 0, 1 1, 0 0))")
 The writer emits uppercase geometry names, deterministic spacing, `Z`, `M`,
 and `ZM` suffixes, and `EMPTY` forms. It rejects non-finite coordinates,
 inconsistent dimensions, and empty multipart components.
+
+## WKT2 and EWKT
+
+```moonbit
+let wkt2 = match @moon_geocodec.parse_wkt2(
+  "MULTIPOINT ((1 2), (3 4))",
+  @moon_geocodec.GeoLimits::default(),
+) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+assert_eq(
+  @moon_geocodec.format_wkt2(wkt2),
+  Ok("MULTIPOINT ((1 2), (3 4))"),
+)
+
+let ewkt = match @moon_geocodec.parse_ewkt(
+  "SRID=4326;POINT (1 2)",
+  @moon_geocodec.GeoLimits::default(),
+) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+assert_eq(ewkt.srid, Some(4326))
+assert_eq(
+  @moon_geocodec.format_ewkt(ewkt),
+  Ok("SRID=4326;POINT (1 2)"),
+)
+```
+
+WKT 2 uses parenthesized `MULTIPOINT` coordinates. Curve and surface types
+outside the current geometry model are reported as `UnsupportedGeometry`.
+EWKT SRIDs are optional, must be non-negative, and are stored separately from
+the geometry.
 
 ## WKT lexer
 
@@ -81,7 +114,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.4
+moon add ggbond44439/moon_geocodec@0.1.5
 ```
 
 ## Build and test

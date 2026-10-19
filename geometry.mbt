@@ -111,6 +111,29 @@ pub(all) enum Geometry {
 } derive(Eq, @debug.Debug)
 
 ///|
+/// A geometry with optional spatial reference system metadata.
+pub(all) struct SpatialGeometry {
+  srid : Int32?
+  geometry : Geometry
+} derive(Eq, @debug.Debug)
+
+///|
+pub fn SpatialGeometry::new(
+  geometry : Geometry,
+  srid : Int32?,
+) -> Result[SpatialGeometry, GeoError] {
+  match srid {
+    Some(value) =>
+      if value < 0 {
+        Err(InvalidSrid(value))
+      } else {
+        Ok({ srid, geometry, })
+      }
+    None => Ok({ srid, geometry, })
+  }
+}
+
+///|
 pub fn Geometry::kind(self : Geometry) -> GeometryKind {
   match self {
     Point(_) => Point
@@ -328,3 +351,9 @@ pub extend Geometry with Eq::{not_equal, equal}
 
 ///|
 pub extend Geometry with @debug.Debug::{to_repr}
+
+///|
+pub extend SpatialGeometry with Eq::{not_equal, equal}
+
+///|
+pub extend SpatialGeometry with @debug.Debug::{to_repr}
