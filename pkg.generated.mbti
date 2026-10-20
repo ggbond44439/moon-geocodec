@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.12"
+pub const VERSION : String = "0.1.13"
 
 pub fn format_ewkb(SpatialGeometry) -> Result[Bytes, GeoError]
 
@@ -64,6 +64,22 @@ pub fn BoundingBox::height(Self) -> Double
 pub fn BoundingBox::not_equal(Self, Self) -> Bool
 pub fn BoundingBox::to_repr(Self) -> @debug.Repr
 pub fn BoundingBox::width(Self) -> Double
+
+pub(all) struct BoundingBox3D {
+  min_x : Double
+  min_y : Double
+  min_z : Double
+  max_x : Double
+  max_y : Double
+  max_z : Double
+} derive(Eq, @debug.Debug)
+pub fn BoundingBox3D::depth(Self) -> Double
+pub fn BoundingBox3D::equal(Self, Self) -> Bool
+pub fn BoundingBox3D::extent(Self) -> (Double, Double, Double)
+pub fn BoundingBox3D::height(Self) -> Double
+pub fn BoundingBox3D::not_equal(Self, Self) -> Bool
+pub fn BoundingBox3D::to_repr(Self) -> @debug.Repr
+pub fn BoundingBox3D::width(Self) -> Double
 
 pub(all) struct Coordinate {
   x : Double
@@ -143,6 +159,8 @@ pub(all) enum Geometry {
   GeometryCollection(Array[Geometry])
 } derive(Eq, @debug.Debug)
 pub fn Geometry::bounds(Self) -> BoundingBox?
+pub fn Geometry::bounds_3d(Self) -> BoundingBox3D?
+pub fn Geometry::centroid(Self) -> Coordinate?
 pub fn Geometry::coordinate_count(Self) -> Int
 pub fn Geometry::equal(Self, Self) -> Bool
 pub fn Geometry::is_empty(Self) -> Bool

@@ -7,7 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.12` adds structural geometry validation and normalization.
+`0.1.13` adds 3D bounding boxes, extents, and geometry-aware centroids.
 
 ## WKT parser
 
@@ -201,6 +201,22 @@ component structure. Normalization removes consecutive duplicate coordinates,
 closes polygon rings, orients exterior rings counter-clockwise and interior
 rings clockwise, then validates the result.
 
+## 3D bounds and centroids
+
+```moonbit
+let bounds = geometry.bounds_3d()
+let center = geometry.centroid()
+```
+
+`bounds_3d` returns a `BoundingBox3D` with `width`, `height`, `depth`, and an
+`extent` tuple. Missing Z ordinates contribute `0.0`, so 2D and mixed-height
+data retain deterministic three-dimensional bounds.
+
+`centroid` is geometry-aware: points use coordinate averages, lines use
+segment-length weighting, polygons use signed area with holes subtracted, and
+GeometryCollections prefer their highest-dimensional members. Z is included
+when all contributing coordinates provide it.
+
 ## WKT lexer
 
 ```moonbit
@@ -239,7 +255,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.12
+moon add ggbond44439/moon_geocodec@0.1.13
 ```
 
 ## Build and test

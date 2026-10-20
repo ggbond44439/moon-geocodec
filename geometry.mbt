@@ -98,6 +98,37 @@ pub fn BoundingBox::height(self : BoundingBox) -> Double {
 }
 
 ///|
+/// A closed three-dimensional bounds box.
+pub(all) struct BoundingBox3D {
+  min_x : Double
+  min_y : Double
+  min_z : Double
+  max_x : Double
+  max_y : Double
+  max_z : Double
+} derive(Eq, @debug.Debug)
+
+///|
+pub fn BoundingBox3D::width(self : BoundingBox3D) -> Double {
+  self.max_x - self.min_x
+}
+
+///|
+pub fn BoundingBox3D::height(self : BoundingBox3D) -> Double {
+  self.max_y - self.min_y
+}
+
+///|
+pub fn BoundingBox3D::depth(self : BoundingBox3D) -> Double {
+  self.max_z - self.min_z
+}
+
+///|
+pub fn BoundingBox3D::extent(self : BoundingBox3D) -> (Double, Double, Double) {
+  (self.width(), self.height(), self.depth())
+}
+
+///|
 /// Typed geometry model independent of text and binary encodings.
 pub(all) enum Geometry {
   Point(Coordinate)
@@ -345,6 +376,12 @@ pub extend BoundingBox with Eq::{not_equal, equal}
 
 ///|
 pub extend BoundingBox with @debug.Debug::{to_repr}
+
+///|
+pub extend BoundingBox3D with Eq::{not_equal, equal}
+
+///|
+pub extend BoundingBox3D with @debug.Debug::{to_repr}
 
 ///|
 pub extend Geometry with Eq::{not_equal, equal}
