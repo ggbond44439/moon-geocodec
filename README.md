@@ -7,7 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.11` adds compact GeoJSON export plus WKT/WKB conversion helpers.
+`0.1.12` adds structural geometry validation and normalization.
 
 ## WKT parser
 
@@ -185,6 +185,22 @@ Conversion helpers bridge formats without exposing intermediate steps:
 - `wkb_to_geojson`
 - `geojson_to_wkb`
 
+## Geometry validation and normalization
+
+```moonbit
+let normalized = match @moon_geocodec.normalize_geometry(geometry) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+assert_eq(@moon_geocodec.validate_geometry(normalized), Ok(()))
+```
+
+Validation checks finite coordinates, dimension consistency, line minimum
+length and distinctness, polygon ring length, closure and area, and multipart
+component structure. Normalization removes consecutive duplicate coordinates,
+closes polygon rings, orients exterior rings counter-clockwise and interior
+rings clockwise, then validates the result.
+
 ## WKT lexer
 
 ```moonbit
@@ -223,7 +239,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.11
+moon add ggbond44439/moon_geocodec@0.1.12
 ```
 
 ## Build and test

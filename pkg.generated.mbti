@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.11"
+pub const VERSION : String = "0.1.12"
 
 pub fn format_ewkb(SpatialGeometry) -> Result[Bytes, GeoError]
 
@@ -28,6 +28,8 @@ pub fn geojson_to_wkb(StringView, GeoLimits) -> Result[Bytes, GeoError]
 
 pub fn geojson_to_wkt(StringView, GeoLimits) -> Result[String, GeoError]
 
+pub fn normalize_geometry(Geometry) -> Result[Geometry, GeoError]
+
 pub fn parse_ewkb(BytesView, GeoLimits) -> Result[SpatialGeometry, GeoError]
 
 pub fn parse_ewkt(StringView, GeoLimits) -> Result[SpatialGeometry, GeoError]
@@ -41,6 +43,8 @@ pub fn parse_wkt(StringView, GeoLimits) -> Result[Geometry, GeoError]
 pub fn parse_wkt2(StringView, GeoLimits) -> Result[Geometry, GeoError]
 
 pub fn tokenize_wkt(StringView, GeoLimits) -> Result[Array[WktToken], GeoError]
+
+pub fn validate_geometry(Geometry) -> Result[Unit, GeoError]
 
 pub fn wkb_to_geojson(BytesView, GeoLimits) -> Result[String, GeoError]
 
@@ -93,6 +97,7 @@ pub(all) enum GeoError {
   InvalidWkb(String, Int)
   InvalidGeoJson(String, Int)
   InvalidCoordinate(String)
+  InvalidGeometry(String)
   InvalidBoundary(String, Int)
   UnsupportedGeometry(String)
   InvalidLimit(String, Int)

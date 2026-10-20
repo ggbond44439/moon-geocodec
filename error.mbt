@@ -5,6 +5,7 @@ pub(all) enum GeoError {
   InvalidWkb(String, Int32)
   InvalidGeoJson(String, Int32)
   InvalidCoordinate(String)
+  InvalidGeometry(String)
   InvalidBoundary(String, Int32)
   UnsupportedGeometry(String)
   InvalidLimit(String, Int32)
@@ -31,6 +32,8 @@ pub impl Show for GeoError with fn output(self, logger) {
       )
     InvalidCoordinate(message) =>
       logger.write_string("invalid coordinate: " + message)
+    InvalidGeometry(message) =>
+      logger.write_string("invalid geometry: " + message)
     InvalidBoundary(message, index) =>
       logger.write_string(
         "invalid boundary at index " + index.to_string() + ": " + message,
