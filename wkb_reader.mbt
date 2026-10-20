@@ -9,13 +9,25 @@ priv struct WkbReader {
   data : BytesView
   mut offset : Int32
   limits : GeoLimits
+  allow_ewkb : Bool
   mut coordinate_count : Int32
   mut geometry_count : Int32
 }
 
 ///|
-fn WkbReader::new(data : BytesView, limits : GeoLimits) -> WkbReader {
-  { data, offset: 0, limits, coordinate_count: 0, geometry_count: 0, }
+fn WkbReader::new(
+  data : BytesView,
+  limits : GeoLimits,
+  allow_ewkb : Bool,
+) -> WkbReader {
+  {
+    data,
+    offset: 0,
+    limits,
+    allow_ewkb,
+    coordinate_count: 0,
+    geometry_count: 0,
+  }
 }
 
 ///|
@@ -341,6 +353,7 @@ fn WkbReader::read_multi_point_geometry(
   self : WkbReader,
   order : WkbByteOrder,
   dimension : CoordinateDimension,
+  srid : Int32?,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -351,7 +364,8 @@ fn WkbReader::read_multi_point_geometry(
   let points : Array[Coordinate] = []
   for _ in 0..<count {
     let component_offset = self.offset
-    let (component, component_dimension) = match self.read_geometry(depth + 1) {
+    let (component, component_dimension, component_srid) = match
+      self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
     }
@@ -360,6 +374,11 @@ fn WkbReader::read_multi_point_geometry(
         InvalidWkb(
           "MULTIPOINT component dimension does not match parent", component_offset,
         ),
+      )
+    }
+    if !validate_nested_srid(component_srid, srid) {
+      return Err(
+        InvalidWkb("nested SRID does not match parent", component_offset),
       )
     }
     match component {
@@ -384,6 +403,7 @@ fn WkbReader::read_multi_line_string_geometry(
   self : WkbReader,
   order : WkbByteOrder,
   dimension : CoordinateDimension,
+  srid : Int32?,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -394,7 +414,8 @@ fn WkbReader::read_multi_line_string_geometry(
   let lines : Array[Array[Coordinate]] = []
   for _ in 0..<count {
     let component_offset = self.offset
-    let (component, component_dimension) = match self.read_geometry(depth + 1) {
+    let (component, component_dimension, component_srid) = match
+      self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
     }
@@ -403,6 +424,11 @@ fn WkbReader::read_multi_line_string_geometry(
         InvalidWkb(
           "MULTILINESTRING component dimension does not match parent", component_offset,
         ),
+      )
+    }
+    if !validate_nested_srid(component_srid, srid) {
+      return Err(
+        InvalidWkb("nested SRID does not match parent", component_offset),
       )
     }
     match component {
@@ -423,6 +449,7 @@ fn WkbReader::read_multi_polygon_geometry(
   self : WkbReader,
   order : WkbByteOrder,
   dimension : CoordinateDimension,
+  srid : Int32?,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -433,7 +460,8 @@ fn WkbReader::read_multi_polygon_geometry(
   let polygons : Array[Array[Array[Coordinate]]] = []
   for _ in 0..<count {
     let component_offset = self.offset
-    let (component, component_dimension) = match self.read_geometry(depth + 1) {
+    let (component, component_dimension, component_srid) = match
+      self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
     }
@@ -442,6 +470,11 @@ fn WkbReader::read_multi_polygon_geometry(
         InvalidWkb(
           "MULTIPOLYGON component dimension does not match parent", component_offset,
         ),
+      )
+    }
+    if !validate_nested_srid(component_srid, srid) {
+      return Err(
+        InvalidWkb("nested SRID does not match parent", component_offset),
       )
     }
     match component {
@@ -462,6 +495,7 @@ fn WkbReader::read_geometry_collection_geometry(
   self : WkbReader,
   order : WkbByteOrder,
   dimension : CoordinateDimension,
+  srid : Int32?,
   depth : Int32,
 ) -> Result[Geometry, GeoError] {
   let count = match
@@ -472,7 +506,8 @@ fn WkbReader::read_geometry_collection_geometry(
   let geometries : Array[Geometry] = []
   for _ in 0..<count {
     let component_offset = self.offset
-    let (geometry, component_dimension) = match self.read_geometry(depth + 1) {
+    let (geometry, component_dimension, component_srid) = match
+      self.read_geometry(depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
     }
@@ -483,13 +518,18 @@ fn WkbReader::read_geometry_collection_geometry(
         ),
       )
     }
+    if !validate_nested_srid(component_srid, srid) {
+      return Err(
+        InvalidWkb("nested SRID does not match parent", component_offset),
+      )
+    }
     geometries.push(geometry)
   }
   Ok(GeometryCollection(geometries))
 }
 
 ///|
-fn decode_wkb_type(
+fn decode_iso_wkb_type(
   type_code : UInt32,
 ) -> Result[(UInt32, CoordinateDimension), GeoError] {
   if type_code >= 1U && type_code <= 7U {
@@ -506,10 +546,60 @@ fn decode_wkb_type(
 }
 
 ///|
+fn decode_ewkb_type(
+  type_code : UInt32,
+) -> Result[(UInt32, CoordinateDimension, Bool), GeoError] {
+  if type_code.land(0x10000000U) != 0U {
+    return Err(UnsupportedGeometry("EWKB bounding boxes are not supported"))
+  }
+  let has_z = type_code.land(0x80000000U) != 0U
+  let has_m = type_code.land(0x40000000U) != 0U
+  let has_srid = type_code.land(0x20000000U) != 0U
+  let base_code = type_code.land(0x0FFFFFFFU)
+  if base_code < 1U || base_code > 7U {
+    return Err(UnsupportedGeometry("EWKB type " + type_code.to_string()))
+  }
+  let dimension = match (has_z, has_m) {
+    (true, true) => Xyzm
+    (true, false) => Xyz
+    (false, true) => Xym
+    (false, false) => Xy
+  }
+  Ok((base_code, dimension, has_srid))
+}
+
+///|
+fn decode_wkb_type(
+  type_code : UInt32,
+  allow_ewkb : Bool,
+) -> Result[(UInt32, CoordinateDimension, Bool), GeoError] {
+  if type_code.land(0xF0000000U) != 0U {
+    if !allow_ewkb {
+      return Err(UnsupportedGeometry("WKB type " + type_code.to_string()))
+    }
+    decode_ewkb_type(type_code)
+  } else {
+    let (base_code, dimension) = match decode_iso_wkb_type(type_code) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    Ok((base_code, dimension, false))
+  }
+}
+
+///|
+fn validate_nested_srid(nested : Int32?, parent : Int32?) -> Bool {
+  match nested {
+    Some(value) => parent == Some(value)
+    None => true
+  }
+}
+
+///|
 fn WkbReader::read_geometry(
   self : WkbReader,
   depth : Int32,
-) -> Result[(Geometry, CoordinateDimension), GeoError] {
+) -> Result[(Geometry, CoordinateDimension, Int32?), GeoError] {
   match self.limits.check_depth(depth) {
     Ok(_) => ()
     Err(err) => return Err(err)
@@ -527,9 +617,23 @@ fn WkbReader::read_geometry(
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  let (base_code, dimension) = match decode_wkb_type(type_code) {
+  let (base_code, dimension, has_srid) = match
+    decode_wkb_type(type_code, self.allow_ewkb) {
     Ok(value) => value
     Err(err) => return Err(err)
+  }
+  let srid : Int32? = if has_srid {
+    let srid_offset = self.offset
+    let value = match self.read_u32(order, "SRID") {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    if value > 2147483647U {
+      return Err(InvalidWkb("SRID exceeds supported range", srid_offset))
+    }
+    Some(value.reinterpret_as_int())
+  } else {
+    None
   }
   let geometry = if base_code == 1U {
     self.read_point_geometry(order, dimension)
@@ -538,18 +642,18 @@ fn WkbReader::read_geometry(
   } else if base_code == 3U {
     self.read_polygon_geometry(order, dimension)
   } else if base_code == 4U {
-    self.read_multi_point_geometry(order, dimension, depth)
+    self.read_multi_point_geometry(order, dimension, srid, depth)
   } else if base_code == 5U {
-    self.read_multi_line_string_geometry(order, dimension, depth)
+    self.read_multi_line_string_geometry(order, dimension, srid, depth)
   } else if base_code == 6U {
-    self.read_multi_polygon_geometry(order, dimension, depth)
+    self.read_multi_polygon_geometry(order, dimension, srid, depth)
   } else if base_code == 7U {
-    self.read_geometry_collection_geometry(order, dimension, depth)
+    self.read_geometry_collection_geometry(order, dimension, srid, depth)
   } else {
     Err(UnsupportedGeometry("WKB type " + type_code.to_string()))
   }
   match geometry {
-    Ok(value) => Ok((value, dimension))
+    Ok(value) => Ok((value, dimension, srid))
     Err(err) => Err(err)
   }
 }
@@ -559,8 +663,8 @@ pub fn parse_wkb(
   source : BytesView,
   limits : GeoLimits,
 ) -> Result[Geometry, GeoError] {
-  let reader = WkbReader::new(source, limits)
-  let (geometry, _) = match reader.read_geometry(1) {
+  let reader = WkbReader::new(source, limits, false)
+  let (geometry, _, _) = match reader.read_geometry(1) {
     Ok(value) => value
     Err(err) => return Err(err)
   }
@@ -568,6 +672,23 @@ pub fn parse_wkb(
     Err(TrailingBytes(reader.offset))
   } else {
     Ok(geometry)
+  }
+}
+
+///|
+pub fn parse_ewkb(
+  source : BytesView,
+  limits : GeoLimits,
+) -> Result[SpatialGeometry, GeoError] {
+  let reader = WkbReader::new(source, limits, true)
+  let (geometry, _, srid) = match reader.read_geometry(1) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  if reader.offset != source.length() {
+    Err(TrailingBytes(reader.offset))
+  } else {
+    Ok({ srid, geometry, })
   }
 }
 

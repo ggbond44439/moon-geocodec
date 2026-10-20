@@ -1,3 +1,3 @@
 ///|
 /// Public version marker for the MoonGeoCodec library.
-pub const VERSION : String = "0.1.8"
+pub const VERSION : String = "0.1.9"

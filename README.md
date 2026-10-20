@@ -7,9 +7,8 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.8` completes WKB `Z`, `M`, and `ZM` support across the reader and writer,
-including dimensioned empty geometries. EWKB binary support continues in the
-next milestone.
+`0.1.9` adds PostGIS-compatible EWKB reading and writing with dimension flags
+and embedded SRIDs. GeoJSON import/export continues in subsequent milestones.
 
 ## WKT parser
 
@@ -116,6 +115,28 @@ multipart components, and `GeometryCollection` recursion. Dimensioned empty
 children inherit the enclosing geometry dimension. The writer rejects mixed
 dimensions, non-finite ordinates, and empty polygon rings with typed errors.
 
+## EWKB
+
+```moonbit
+let value = match @moon_geocodec.parse_ewkb(
+  ewkb_bytes.exact_view(),
+  @moon_geocodec.GeoLimits::default(),
+) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+let encoded = match @moon_geocodec.format_ewkb(value) {
+  Ok(bytes) => bytes
+  Err(err) => fail(err.to_string())
+}
+```
+
+EWKB supports PostGIS `Z`, `M`, and `SRID` type flags, including combined
+`Z/M/SRID` geometries. SRIDs are stored on `SpatialGeometry`; the writer emits
+the SRID on the root geometry while nested components carry only matching
+dimension flags. `parse_wkb` remains strict ISO WKB and rejects EWKB high-bit
+type codes.
+
 ## WKT lexer
 
 ```moonbit
@@ -154,7 +175,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.8
+moon add ggbond44439/moon_geocodec@0.1.9
 ```
 
 ## Build and test
