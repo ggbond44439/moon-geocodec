@@ -7,8 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.10` adds GeoJSON geometry, Feature, and FeatureCollection import. GeoJSON
-export and general conversion helpers continue in the next milestone.
+`0.1.11` adds compact GeoJSON export plus WKT/WKB conversion helpers.
 
 ## WKT parser
 
@@ -161,6 +160,31 @@ FeatureCollections. Feature properties and bounding boxes are ignored because
 the output is the typed geometry model. Null feature geometries are skipped;
 FeatureCollections are represented as `GeometryCollection`.
 
+## GeoJSON export and conversions
+
+```moonbit
+let text = match @moon_geocodec.format_geojson(geometry) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+assert_eq(
+  text,
+  "{\"type\":\"Point\",\"coordinates\":[1,2]}",
+)
+```
+
+`format_geojson` writes deterministic compact GeoJSON with fixed key order. It
+supports `XY` and `XYZ` positions, empty geometries, multipart geometries, and
+GeometryCollections. M-only and ZM geometries are rejected because GeoJSON has
+no standard M ordinate.
+
+Conversion helpers bridge formats without exposing intermediate steps:
+
+- `wkt_to_geojson`
+- `geojson_to_wkt`
+- `wkb_to_geojson`
+- `geojson_to_wkb`
+
 ## WKT lexer
 
 ```moonbit
@@ -199,7 +223,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.10
+moon add ggbond44439/moon_geocodec@0.1.11
 ```
 
 ## Build and test

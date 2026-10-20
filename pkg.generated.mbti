@@ -6,13 +6,15 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.10"
+pub const VERSION : String = "0.1.11"
 
 pub fn format_ewkb(SpatialGeometry) -> Result[Bytes, GeoError]
 
 pub fn format_ewkb_with_order(SpatialGeometry, WkbByteOrder) -> Result[Bytes, GeoError]
 
 pub fn format_ewkt(SpatialGeometry) -> Result[String, GeoError]
+
+pub fn format_geojson(Geometry) -> Result[String, GeoError]
 
 pub fn format_wkb(Geometry) -> Result[Bytes, GeoError]
 
@@ -21,6 +23,10 @@ pub fn format_wkb_with_order(Geometry, WkbByteOrder) -> Result[Bytes, GeoError]
 pub fn format_wkt(Geometry) -> Result[String, GeoError]
 
 pub fn format_wkt2(Geometry) -> Result[String, GeoError]
+
+pub fn geojson_to_wkb(StringView, GeoLimits) -> Result[Bytes, GeoError]
+
+pub fn geojson_to_wkt(StringView, GeoLimits) -> Result[String, GeoError]
 
 pub fn parse_ewkb(BytesView, GeoLimits) -> Result[SpatialGeometry, GeoError]
 
@@ -35,6 +41,10 @@ pub fn parse_wkt(StringView, GeoLimits) -> Result[Geometry, GeoError]
 pub fn parse_wkt2(StringView, GeoLimits) -> Result[Geometry, GeoError]
 
 pub fn tokenize_wkt(StringView, GeoLimits) -> Result[Array[WktToken], GeoError]
+
+pub fn wkb_to_geojson(BytesView, GeoLimits) -> Result[String, GeoError]
+
+pub fn wkt_to_geojson(StringView, GeoLimits) -> Result[String, GeoError]
 
 // Errors
 
