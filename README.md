@@ -7,8 +7,8 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.9` adds PostGIS-compatible EWKB reading and writing with dimension flags
-and embedded SRIDs. GeoJSON import/export continues in subsequent milestones.
+`0.1.10` adds GeoJSON geometry, Feature, and FeatureCollection import. GeoJSON
+export and general conversion helpers continue in the next milestone.
 
 ## WKT parser
 
@@ -137,6 +137,30 @@ the SRID on the root geometry while nested components carry only matching
 dimension flags. `parse_wkb` remains strict ISO WKB and rejects EWKB high-bit
 type codes.
 
+## GeoJSON import
+
+```moonbit
+let geometry = match @moon_geocodec.parse_geojson(
+  "{\"type\":\"Point\",\"coordinates\":[1,2]}",
+  @moon_geocodec.GeoLimits::default(),
+) {
+  Ok(value) => value
+  Err(err) => fail(err.to_string())
+}
+assert_eq(
+  geometry,
+  @moon_geocodec.Geometry::Point(
+    @moon_geocodec.Coordinate::xy(1.0, 2.0),
+  ),
+)
+```
+
+The importer supports all seven GeoJSON geometry types, two- and
+three-dimensional positions, empty geometry arrays, Features, and
+FeatureCollections. Feature properties and bounding boxes are ignored because
+the output is the typed geometry model. Null feature geometries are skipped;
+FeatureCollections are represented as `GeometryCollection`.
+
 ## WKT lexer
 
 ```moonbit
@@ -175,7 +199,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.9
+moon add ggbond44439/moon_geocodec@0.1.10
 ```
 
 ## Build and test

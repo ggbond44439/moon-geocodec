@@ -3,6 +3,7 @@
 pub(all) enum GeoError {
   InvalidWkt(String, Int32)
   InvalidWkb(String, Int32)
+  InvalidGeoJson(String, Int32)
   InvalidCoordinate(String)
   InvalidBoundary(String, Int32)
   UnsupportedGeometry(String)
@@ -23,6 +24,10 @@ pub impl Show for GeoError with fn output(self, logger) {
     InvalidWkb(message, offset) =>
       logger.write_string(
         "invalid WKB at offset " + offset.to_string() + ": " + message,
+      )
+    InvalidGeoJson(message, offset) =>
+      logger.write_string(
+        "invalid GeoJSON at offset " + offset.to_string() + ": " + message,
       )
     InvalidCoordinate(message) =>
       logger.write_string("invalid coordinate: " + message)
