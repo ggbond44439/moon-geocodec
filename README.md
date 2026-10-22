@@ -7,7 +7,8 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.16` adds deterministic parser fuzzing and input-size hardening.
+`0.2.0` is the first release with the complete WKT/WKB/EWKB/GeoJSON pipeline,
+validation, metrics, interoperability vectors, and CLI.
 
 ## WKT parser
 
@@ -254,6 +255,17 @@ The test suite includes deterministic pseudorandom WKB/EWKB inputs, truncated
 WKT/WKT2/GeoJSON inputs, and byte-size limits for binary parsers. Malformed
 inputs are expected to return typed errors without panics.
 
+## Examples and release
+
+Run the end-to-end example with:
+
+```text
+moon run examples/quickstart
+```
+
+The release includes the reusable library, the `cmd/cli` command layer, the
+`cmd/main` executable, and the reference vectors under `interop/`.
+
 ## WKT lexer
 
 ```moonbit
@@ -292,7 +304,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.16
+moon add ggbond44439/moon_geocodec@0.2.0
 ```
 
 ## Build and test

@@ -32,3 +32,6 @@ jobs:
 
       - name: CLI smoke test
         run: moon run cmd/main -- convert wkt geojson "POINT (1 2)"
+
+      - name: Example smoke test
+        run: moon run examples/quickstart
