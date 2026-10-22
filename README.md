@@ -7,8 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.15` adds cross-language interoperability vectors and an optional Shapely
-verification script.
+`0.1.16` adds deterministic parser fuzzing and input-size hardening.
 
 ## WKT parser
 
@@ -249,6 +248,12 @@ python interop/verify_shapely.py
 The vector set includes 2D points, line strings, polygons, SRID-bearing EWKB,
 and Z-bearing EWKB.
 
+## Fuzzing and hardening
+
+The test suite includes deterministic pseudorandom WKB/EWKB inputs, truncated
+WKT/WKT2/GeoJSON inputs, and byte-size limits for binary parsers. Malformed
+inputs are expected to return typed errors without panics.
+
 ## WKT lexer
 
 ```moonbit
@@ -287,7 +292,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.15
+moon add ggbond44439/moon_geocodec@0.1.16
 ```
 
 ## Build and test

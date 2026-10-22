@@ -663,6 +663,10 @@ pub fn parse_wkb(
   source : BytesView,
   limits : GeoLimits,
 ) -> Result[Geometry, GeoError] {
+  match limits.check_text(source.length()) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
   let reader = WkbReader::new(source, limits, false)
   let (geometry, _, _) = match reader.read_geometry(1) {
     Ok(value) => value
@@ -680,6 +684,10 @@ pub fn parse_ewkb(
   source : BytesView,
   limits : GeoLimits,
 ) -> Result[SpatialGeometry, GeoError] {
+  match limits.check_text(source.length()) {
+    Ok(_) => ()
+    Err(err) => return Err(err)
+  }
   let reader = WkbReader::new(source, limits, true)
   let (geometry, _, srid) = match reader.read_geometry(1) {
     Ok(value) => value
