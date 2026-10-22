@@ -1,5 +1,4 @@
 ///|
-/// Command-line interface implementation.
 priv enum CliFormat {
   Wkt
   Wkt2

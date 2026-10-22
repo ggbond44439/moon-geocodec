@@ -1,5 +1,4 @@
 ///|
-/// Coordinate dimensionality supported by geometry interchange formats.
 pub(all) enum CoordinateDimension {
   Xy
   Xyz
@@ -8,7 +7,6 @@ pub(all) enum CoordinateDimension {
 } derive(Eq, @debug.Debug)
 
 ///|
-/// A coordinate with optional Z and M ordinates.
 pub(all) struct Coordinate {
   x : Double
   y : Double
@@ -79,7 +77,6 @@ pub(all) enum GeometryKind {
 } derive(Eq, @debug.Debug)
 
 ///|
-/// A closed coordinate bounds box. Empty geometries have no bounds.
 pub(all) struct BoundingBox {
   min_x : Double
   min_y : Double
@@ -98,7 +95,6 @@ pub fn BoundingBox::height(self : BoundingBox) -> Double {
 }
 
 ///|
-/// A closed three-dimensional bounds box.
 pub(all) struct BoundingBox3D {
   min_x : Double
   min_y : Double
@@ -129,7 +125,6 @@ pub fn BoundingBox3D::extent(self : BoundingBox3D) -> (Double, Double, Double) {
 }
 
 ///|
-/// Typed geometry model independent of text and binary encodings.
 pub(all) enum Geometry {
   Point(Coordinate)
   EmptyPoint
@@ -142,7 +137,6 @@ pub(all) enum Geometry {
 } derive(Eq, @debug.Debug)
 
 ///|
-/// A geometry with optional spatial reference system metadata.
 pub(all) struct SpatialGeometry {
   srid : Int32?
   geometry : Geometry

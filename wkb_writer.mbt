@@ -351,13 +351,11 @@ fn resolve_wkb_dimension(
 }
 
 ///|
-/// Serializes a geometry as little-endian WKB.
 pub fn format_wkb(geometry : Geometry) -> Result[Bytes, GeoError] {
   format_wkb_with_order(geometry, LittleEndian)
 }
 
 ///|
-/// Serializes a geometry as WKB using the requested byte order.
 pub fn format_wkb_with_order(
   geometry : Geometry,
   order : WkbByteOrder,
@@ -374,13 +372,11 @@ pub fn format_wkb_with_order(
 }
 
 ///|
-/// Serializes a spatial geometry as little-endian EWKB.
 pub fn format_ewkb(value : SpatialGeometry) -> Result[Bytes, GeoError] {
   format_ewkb_with_order(value, LittleEndian)
 }
 
 ///|
-/// Serializes a spatial geometry as EWKB using the requested byte order.
 pub fn format_ewkb_with_order(
   value : SpatialGeometry,
   order : WkbByteOrder,

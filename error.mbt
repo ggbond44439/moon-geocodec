@@ -1,5 +1,4 @@
 ///|
-/// Typed failures produced by MoonGeoCodec parsers and validators.
 pub(all) enum GeoError {
   InvalidWkt(String, Int32)
   InvalidWkb(String, Int32)

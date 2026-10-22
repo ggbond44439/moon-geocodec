@@ -442,7 +442,6 @@ fn centroid_data(geometry : Geometry) -> CentroidData? {
 }
 
 ///|
-/// Computes a dimension-weighted centroid.
 pub fn Geometry::centroid(self : Geometry) -> Coordinate? {
   let data = match centroid_data(self) {
     Some(value) => value

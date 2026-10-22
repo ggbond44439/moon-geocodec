@@ -312,7 +312,6 @@ fn GeoJsonWriter::write_geometry(
 }
 
 ///|
-/// Serializes a geometry as compact GeoJSON.
 pub fn format_geojson(geometry : Geometry) -> Result[String, GeoError] {
   let writer = GeoJsonWriter::new()
   match writer.write_geometry(geometry) {

@@ -1,5 +1,3 @@
-"""Optional cross-language verification for MoonGeoCodec reference vectors."""
-
 import json
 import pathlib
 import sys

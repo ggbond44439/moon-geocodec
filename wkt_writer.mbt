@@ -596,19 +596,16 @@ fn format_wkt_dialect(
 }
 
 ///|
-/// Serializes a geometry as canonical WKT 1.
 pub fn format_wkt(geometry : Geometry) -> Result[String, GeoError] {
   format_wkt_dialect(geometry, Wkt1)
 }
 
 ///|
-/// Serializes a geometry as canonical WKT 2.
 pub fn format_wkt2(geometry : Geometry) -> Result[String, GeoError] {
   format_wkt_dialect(geometry, Wkt2)
 }
 
 ///|
-/// Serializes a geometry with an optional EWKT SRID prefix.
 pub fn format_ewkt(value : SpatialGeometry) -> Result[String, GeoError] {
   let text = match format_wkt(value.geometry) {
     Ok(value) => value

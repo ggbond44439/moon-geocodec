@@ -1,5 +1,4 @@
 ///|
-/// Resource limits shared by all MoonGeoCodec parsers.
 pub(all) struct GeoLimits {
   max_text_bytes : Int32
   max_depth : Int32

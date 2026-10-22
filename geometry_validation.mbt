@@ -227,7 +227,6 @@ fn validate_geometry_at(
 }
 
 ///|
-/// Validates the structural invariants of a geometry.
 pub fn validate_geometry(geometry : Geometry) -> Result[Unit, GeoError] {
   validate_geometry_at(geometry, "geometry")
 }
@@ -402,7 +401,6 @@ fn normalize_geometry_at(
 }
 
 ///|
-/// Normalizes ring closure, consecutive duplicates, and ring direction.
 pub fn normalize_geometry(geometry : Geometry) -> Result[Geometry, GeoError] {
   let normalized = match normalize_geometry_at(geometry, "geometry") {
     Ok(value) => value

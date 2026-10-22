@@ -1,5 +1,4 @@
 ///|
-/// Token categories emitted by the WKT lexer.
 pub(all) enum WktTokenKind {
   Word
   Number
@@ -26,7 +25,6 @@ pub fn WktTokenKind::name(self : WktTokenKind) -> String {
 }
 
 ///|
-/// A WKT token with its source code-unit offset.
 pub(all) struct WktToken {
   kind : WktTokenKind
   text : String
