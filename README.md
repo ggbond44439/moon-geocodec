@@ -7,7 +7,8 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.1.14` adds an inspect, validate, and convert CLI.
+`0.1.15` adds cross-language interoperability vectors and an optional Shapely
+verification script.
 
 ## WKT parser
 
@@ -234,6 +235,20 @@ WKB and EWKB values use hexadecimal strings. `inspect` reports kind,
 dimension, coordinate count, 2D/3D bounds, extent, centroid, SRID, and
 structural validity.
 
+## Interoperability vectors
+
+Reference WKB, EWKB, and GeoJSON vectors live in
+`interop/reference_vectors.json`. The MoonBit test suite validates them
+directly. If Shapely is available, run:
+
+```text
+python -m pip install -r interop/requirements.txt
+python interop/verify_shapely.py
+```
+
+The vector set includes 2D points, line strings, polygons, SRID-bearing EWKB,
+and Z-bearing EWKB.
+
 ## WKT lexer
 
 ```moonbit
@@ -262,7 +277,7 @@ enforces both text-byte and token-count limits.
 - GeoJSON import/export
 - Bounded parsing with typed diagnostics
 - CLI inspection, validation, and conversion commands
-- Interoperability vectors checked against PostGIS, Shapely, and QGIS
+- Interoperability vectors for WKB, EWKB, and GeoJSON
 
 ## Explicit non-goals
 
@@ -272,7 +287,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.1.14
+moon add ggbond44439/moon_geocodec@0.1.15
 ```
 
 ## Build and test

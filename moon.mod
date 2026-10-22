@@ -1,6 +1,6 @@
 name = "ggbond44439/moon_geocodec"
 
-version = "0.1.14"
+version = "0.1.15"
 
 readme = "README.md"
 

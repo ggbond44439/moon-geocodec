@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.14"
+pub const VERSION : String = "0.1.15"
 
 pub fn format_ewkb(SpatialGeometry) -> Result[Bytes, GeoError]
 
