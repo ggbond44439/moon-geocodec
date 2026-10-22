@@ -1,5 +1,6 @@
 import {
-  "ggbond44439/moon_geocodec",
+  "ggbond44439/moon_geocodec/cmd/cli",
+  "moonbitlang/core/env",
 }
 
 pkgtype(kind: "executable")

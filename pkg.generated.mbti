@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.1.13"
+pub const VERSION : String = "0.1.14"
 
 pub fn format_ewkb(SpatialGeometry) -> Result[Bytes, GeoError]
 
@@ -162,6 +162,7 @@ pub fn Geometry::bounds(Self) -> BoundingBox?
 pub fn Geometry::bounds_3d(Self) -> BoundingBox3D?
 pub fn Geometry::centroid(Self) -> Coordinate?
 pub fn Geometry::coordinate_count(Self) -> Int
+pub fn Geometry::dimension(Self) -> CoordinateDimension?
 pub fn Geometry::equal(Self, Self) -> Bool
 pub fn Geometry::is_empty(Self) -> Bool
 pub fn Geometry::kind(Self) -> GeometryKind

@@ -159,6 +159,14 @@ pub fn Geometry::bounds_3d(self : Geometry) -> BoundingBox3D? {
 }
 
 ///|
+pub fn Geometry::dimension(self : Geometry) -> CoordinateDimension? {
+  match geometry_dimension_summary(self) {
+    Uniform(value) => Some(value)
+    _ => None
+  }
+}
+
+///|
 priv enum CentroidKind {
   PointKind
   LineKind

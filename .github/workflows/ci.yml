@@ -29,3 +29,6 @@ jobs:
 
       - name: Build
         run: moon build
+
+      - name: CLI smoke test
+        run: moon run cmd/main -- convert wkt geojson "POINT (1 2)"
