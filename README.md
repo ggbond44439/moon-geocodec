@@ -7,7 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.2.3` adds a Feature-preserving GeoJSON object API.
+`0.2.4` adds repeatable parser and geometry benchmarks.
 
 ## WKT parser
 
@@ -279,6 +279,15 @@ python interop/verify_shapely.py
 The vector set includes 2D points, line strings, polygons, SRID-bearing EWKB,
 and Z-bearing EWKB.
 
+## Benchmarks
+
+The benchmark suite measures WKT, WKB, and GeoJSON parsing for a 1000-point
+line string, plus length and area computation:
+
+```text
+moon bench --target wasm
+```
+
 ## Fuzzing and hardening
 
 The test suite includes deterministic pseudorandom WKB/EWKB inputs, truncated
@@ -334,7 +343,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.2.3
+moon add ggbond44439/moon_geocodec@0.2.4
 ```
 
 ## Build and test

@@ -27,6 +27,9 @@ jobs:
       - name: Test all targets
         run: moon test --target all
 
+      - name: Benchmarks
+        run: moon bench --target wasm
+
       - name: Build
         run: moon build
 
