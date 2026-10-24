@@ -416,6 +416,105 @@ fn centroid_data_from_polygons(
 }
 
 ///|
+fn polygon_perimeter(rings : Array[Array[Coordinate]]) -> Double {
+  let mut total = 0.0
+  for ring in rings {
+    let end = ring.length() - 1
+    for index in 0..<end {
+      let (length, _, _) = segment_length(ring[index], ring[index + 1])
+      total += length
+    }
+  }
+  total
+}
+
+///|
+fn polygon_area(rings : Array[Array[Coordinate]]) -> Double {
+  if rings.length() == 0 {
+    return 0.0
+  }
+  let mut area = centroid_ring_area2(rings[0]).abs() / 2.0
+  for index in 1..<rings.length() {
+    area -= centroid_ring_area2(rings[index]).abs() / 2.0
+  }
+  if area > 0.0 {
+    area
+  } else {
+    0.0
+  }
+}
+
+///|
+pub fn Geometry::length(self : Geometry) -> Double {
+  match self {
+    Point(_) => 0.0
+    EmptyPoint => 0.0
+    LineString(line) => {
+      let end = line.length() - 1
+      let mut total = 0.0
+      for index in 0..<end {
+        let (length, _, _) = segment_length(line[index], line[index + 1])
+        total += length
+      }
+      total
+    }
+    Polygon(rings) => polygon_perimeter(rings)
+    MultiPoint(_) => 0.0
+    MultiLineString(lines) => {
+      let mut total = 0.0
+      for line in lines {
+        let end = line.length() - 1
+        for index in 0..<end {
+          let (length, _, _) = segment_length(line[index], line[index + 1])
+          total += length
+        }
+      }
+      total
+    }
+    MultiPolygon(polygons) => {
+      let mut total = 0.0
+      for polygon in polygons {
+        total += polygon_perimeter(polygon)
+      }
+      total
+    }
+    GeometryCollection(geometries) => {
+      let mut total = 0.0
+      for child in geometries {
+        total += child.length()
+      }
+      total
+    }
+  }
+}
+
+///|
+pub fn Geometry::area(self : Geometry) -> Double {
+  match self {
+    Point(_) => 0.0
+    EmptyPoint => 0.0
+    LineString(_) => 0.0
+    Polygon(rings) => polygon_area(rings)
+    MultiPoint(_) => 0.0
+    MultiLineString(_) => 0.0
+    MultiPolygon(polygons) => {
+      let mut total = 0.0
+      for polygon in polygons {
+        total += polygon_area(polygon)
+      }
+      total
+    }
+    GeometryCollection(geometries) => {
+      let mut total = 0.0
+      for child in geometries {
+        total += child.area()
+      }
+      total
+    }
+  }
+}
+
+///|
 fn centroid_data(geometry : Geometry) -> CentroidData? {
   match geometry {
     Point(coordinate) => centroid_data_from_points([coordinate])

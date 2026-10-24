@@ -15,7 +15,10 @@ test "CLI inspect reports geometry metrics" {
   assert_true(output.contains("coordinates: 1"))
   assert_true(output.contains("bounds3d: 1 2 3 1 2 3"))
   assert_true(output.contains("centroid: 1 2 3"))
+  assert_true(output.contains("length: 0"))
+  assert_true(output.contains("area: 0"))
   assert_true(output.contains("valid: true"))
+  assert_true(output.contains("topology: true"))
 }
 
 ///|
@@ -28,6 +31,21 @@ test "CLI validate reports structural validity" {
     Err(message) =>
       assert_true(message.contains("must contain at least two coordinates"))
     Ok(_) => fail("expected invalid geometry")
+  }
+}
+
+///|
+test "CLI validate-topology checks topological validity" {
+  assert_eq(
+    @cli.execute_cli([
+      "validate-topology", "wkt", "POLYGON ((0 0, 4 0, 4 4, 0 4, 0 0))",
+    ]),
+    Ok("valid"),
+  )
+  let crossing_hole = "POLYGON ((0 0, 4 0, 4 4, 0 4, 0 0), (3 3, 5 3, 5 5, 3 5, 3 3))"
+  match @cli.execute_cli(["validate-topology", "wkt", crossing_hole]) {
+    Err(message) => assert_true(message.contains("hole intersects shell"))
+    Ok(_) => fail("expected topology error")
   }
 }
 

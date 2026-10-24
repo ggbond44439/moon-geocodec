@@ -7,8 +7,8 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.2.0` is the first release with the complete WKT/WKB/EWKB/GeoJSON pipeline,
-validation, metrics, interoperability vectors, and CLI.
+`0.2.1` adds topological validation, polygon metrics, and the
+`validate-topology` CLI command.
 
 ## WKT parser
 
@@ -202,6 +202,9 @@ component structure. Normalization removes consecutive duplicate coordinates,
 closes polygon rings, orients exterior rings counter-clockwise and interior
 rings clockwise, then validates the result.
 
+`validate_geometry_topology` adds ring self-intersection checks, hole
+containment and crossing checks, and multipolygon overlap detection.
+
 ## 3D bounds and centroids
 
 ```moonbit
@@ -218,6 +221,9 @@ segment-length weighting, polygons use signed area with holes subtracted, and
 GeometryCollections prefer their highest-dimensional members. Z is included
 when all contributing coordinates provide it.
 
+`length` returns line/ring length using 3D distance when both endpoints have Z.
+`area` returns planar polygon area with holes subtracted.
+
 ## CLI
 
 The executable supports geometry inspection, structural validation, and format
@@ -226,6 +232,7 @@ conversion:
 ```text
 moon run cmd/main -- inspect wkt "POINT Z (1 2 3)"
 moon run cmd/main -- validate wkt "POLYGON ((0 0, 1 0, 1 1, 0 0))"
+moon run cmd/main -- validate-topology wkt "POLYGON ((0 0, 4 0, 4 4, 0 4, 0 0))"
 moon run cmd/main -- convert wkt geojson "POINT (1 2)"
 moon run cmd/main -- convert ewkt ewkb "SRID=4326;POINT (1 2)"
 ```
@@ -233,7 +240,8 @@ moon run cmd/main -- convert ewkt ewkb "SRID=4326;POINT (1 2)"
 Supported formats are `wkt`, `wkt2`, `ewkt`, `wkb`, `ewkb`, and `geojson`.
 WKB and EWKB values use hexadecimal strings. `inspect` reports kind,
 dimension, coordinate count, 2D/3D bounds, extent, centroid, SRID, and
-structural validity.
+structural validity. `validate-topology` adds self-intersection, hole
+containment, and multipolygon overlap checks.
 
 ## Interoperability vectors
 
@@ -304,7 +312,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.2.0
+moon add ggbond44439/moon_geocodec@0.2.1
 ```
 
 ## Build and test

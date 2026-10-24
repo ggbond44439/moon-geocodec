@@ -272,10 +272,19 @@ fn inspect_text(
       builder.write_string("\ncentroid: " + coordinate_text(centroid))
     None => ()
   }
+  builder.write_string("\nlength: " + value.geometry.length().to_string())
+  builder.write_string("\narea: " + value.geometry.area().to_string())
   match @moon_geocodec.validate_geometry(value.geometry) {
     Ok(_) => builder.write_string("\nvalid: true")
     Err(err) =>
       builder.write_string("\nvalid: false\nvalidation: " + err.to_string())
+  }
+  match @moon_geocodec.validate_geometry_topology(value.geometry) {
+    Ok(_) => builder.write_string("\ntopology: true")
+    Err(err) =>
+      builder.write_string(
+        "\ntopology: false\ntopology_error: " + err.to_string(),
+      )
   }
   builder.to_string()
 }
@@ -288,6 +297,7 @@ fn usage() -> String {
   "Usage:\n" +
   "  moon-geocodec inspect <format> <input>\n" +
   "  moon-geocodec validate <format> <input>\n" +
+  "  moon-geocodec validate-topology <format> <input>\n" +
   "  moon-geocodec convert <from> <to> <input>\n" +
   "\nFormats: wkt, wkt2, ewkt, wkb, ewkb, geojson\n" +
   "WKB and EWKB inputs/outputs use hexadecimal strings."
@@ -327,6 +337,22 @@ pub fn execute_cli(args : Array[String]) -> Result[String, String] {
       Err(err) => return Err(err)
     }
     match @moon_geocodec.validate_geometry(value.geometry) {
+      Ok(_) => Ok("valid")
+      Err(err) => Err(err.to_string())
+    }
+  } else if args[0] == "validate-topology" {
+    if args.length() != 3 {
+      return Err("usage: moon-geocodec validate-topology <format> <input>")
+    }
+    let format = match parse_cli_format(args[1]) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    let value = match decode_input(format, args[2]) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    match @moon_geocodec.validate_geometry_topology(value.geometry) {
       Ok(_) => Ok("valid")
       Err(err) => Err(err.to_string())
     }

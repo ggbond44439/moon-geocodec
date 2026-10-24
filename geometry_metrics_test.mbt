@@ -199,3 +199,39 @@ test "3D polygon centroid propagates z when complete" {
     Some(1.0),
   )
 }
+
+///|
+test "geometry length and area cover line and polygon types" {
+  assert_double_close(
+    @moon_geocodec.Geometry::LineString([
+      @moon_geocodec.Coordinate::xy(0.0, 0.0),
+      @moon_geocodec.Coordinate::xy(3.0, 4.0),
+    ]).length(),
+    5.0,
+  )
+  assert_double_close(
+    @moon_geocodec.Geometry::LineString([
+      @moon_geocodec.Coordinate::xyz(0.0, 0.0, 0.0),
+      @moon_geocodec.Coordinate::xyz(0.0, 0.0, 3.0),
+    ]).length(),
+    3.0,
+  )
+  let polygon = @moon_geocodec.Geometry::Polygon([
+    [
+      @moon_geocodec.Coordinate::xy(0.0, 0.0),
+      @moon_geocodec.Coordinate::xy(4.0, 0.0),
+      @moon_geocodec.Coordinate::xy(4.0, 4.0),
+      @moon_geocodec.Coordinate::xy(0.0, 4.0),
+      @moon_geocodec.Coordinate::xy(0.0, 0.0),
+    ],
+    [
+      @moon_geocodec.Coordinate::xy(1.0, 1.0),
+      @moon_geocodec.Coordinate::xy(3.0, 1.0),
+      @moon_geocodec.Coordinate::xy(3.0, 3.0),
+      @moon_geocodec.Coordinate::xy(1.0, 3.0),
+      @moon_geocodec.Coordinate::xy(1.0, 1.0),
+    ],
+  ])
+  assert_double_close(polygon.area(), 12.0)
+  assert_double_close(polygon.length(), 24.0)
+}

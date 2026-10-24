@@ -57,4 +57,6 @@ fn main {
       println("Centroid: " + center.x.to_string() + " " + center.y.to_string())
     None => ()
   }
+  println("Length: " + normalized.length().to_string())
+  println("Area: " + normalized.area().to_string())
 }

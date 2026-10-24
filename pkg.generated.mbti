@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.2.0"
+pub const VERSION : String = "0.2.1"
 
 pub fn format_ewkb(SpatialGeometry) -> Result[Bytes, GeoError]
 
@@ -45,6 +45,8 @@ pub fn parse_wkt2(StringView, GeoLimits) -> Result[Geometry, GeoError]
 pub fn tokenize_wkt(StringView, GeoLimits) -> Result[Array[WktToken], GeoError]
 
 pub fn validate_geometry(Geometry) -> Result[Unit, GeoError]
+
+pub fn validate_geometry_topology(Geometry) -> Result[Unit, GeoError]
 
 pub fn wkb_to_geojson(BytesView, GeoLimits) -> Result[String, GeoError]
 
@@ -158,6 +160,7 @@ pub(all) enum Geometry {
   MultiPolygon(Array[Array[Array[Coordinate]]])
   GeometryCollection(Array[Geometry])
 } derive(Eq, @debug.Debug)
+pub fn Geometry::area(Self) -> Double
 pub fn Geometry::bounds(Self) -> BoundingBox?
 pub fn Geometry::bounds_3d(Self) -> BoundingBox3D?
 pub fn Geometry::centroid(Self) -> Coordinate?
@@ -166,6 +169,7 @@ pub fn Geometry::dimension(Self) -> CoordinateDimension?
 pub fn Geometry::equal(Self, Self) -> Bool
 pub fn Geometry::is_empty(Self) -> Bool
 pub fn Geometry::kind(Self) -> GeometryKind
+pub fn Geometry::length(Self) -> Double
 pub fn Geometry::not_equal(Self, Self) -> Bool
 pub fn Geometry::to_repr(Self) -> @debug.Repr
 
