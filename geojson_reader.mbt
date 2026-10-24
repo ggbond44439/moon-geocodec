@@ -377,11 +377,11 @@ fn GeoJsonParser::parse_geometry_object(
 }
 
 ///|
-fn GeoJsonParser::parse_feature_geometry(
+fn GeoJsonParser::parse_feature(
   self : GeoJsonParser,
   feature : Json,
   depth : Int32,
-) -> Result[Geometry?, GeoError] {
+) -> Result[GeoJsonFeature, GeoError] {
   let object = match geojson_object(feature, "Feature") {
     Ok(value) => value
     Err(err) => return Err(err)
@@ -397,24 +397,37 @@ fn GeoJsonParser::parse_feature_geometry(
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  match geometry {
-    Null => Ok(None)
+  let parsed_geometry = match geometry {
+    Null => None
     _ => {
       let parsed = match self.parse_geometry_object(geometry, depth) {
         Ok(value) => value
         Err(err) => return Err(err)
       }
-      Ok(Some(parsed))
+      Some(parsed)
     }
   }
+  let properties = match object.get("properties") {
+    Some(value) =>
+      match value {
+        Object(_) => value
+        Null => Json::null()
+        _ =>
+          return Err(
+            geojson_error("Feature.properties must be an object or null"),
+          )
+      }
+    None => Json::null()
+  }
+  Ok({ id: object.get("id"), geometry: parsed_geometry, properties, })
 }
 
 ///|
-fn GeoJsonParser::parse_feature_collection(
+fn GeoJsonParser::parse_feature_collection_features(
   self : GeoJsonParser,
   value : Json,
   depth : Int32,
-) -> Result[Geometry, GeoError] {
+) -> Result[Array[GeoJsonFeature], GeoError] {
   let object = match geojson_object(value, "FeatureCollection") {
     Ok(value) => value
     Err(err) => return Err(err)
@@ -431,25 +444,22 @@ fn GeoJsonParser::parse_feature_collection(
     Ok(value) => value
     Err(err) => return Err(err)
   }
-  let geometries : Array[Geometry] = []
+  let parsed_features : Array[GeoJsonFeature] = []
   for feature in values {
-    let geometry = match self.parse_feature_geometry(feature, depth + 1) {
+    let parsed = match self.parse_feature(feature, depth + 1) {
       Ok(value) => value
       Err(err) => return Err(err)
     }
-    match geometry {
-      Some(value) => geometries.push(value)
-      None => ()
-    }
+    parsed_features.push(parsed)
   }
-  Ok(GeometryCollection(geometries))
+  Ok(parsed_features)
 }
 
 ///|
-pub fn parse_geojson(
+pub fn parse_geojson_object(
   source : StringView,
   limits : GeoLimits,
-) -> Result[Geometry, GeoError] {
+) -> Result[GeoJsonObject, GeoError] {
   match limits.check_text(source.length()) {
     Ok(_) => ()
     Err(err) => return Err(err)
@@ -467,14 +477,48 @@ pub fn parse_geojson(
   }
   let parser = GeoJsonParser::new(limits)
   if kind == "Feature" {
-    match parser.parse_feature_geometry(value, 1) {
-      Ok(Some(geometry)) => Ok(geometry)
-      Ok(None) => Ok(GeometryCollection([]))
+    match parser.parse_feature(value, 1) {
+      Ok(feature) => Ok(Feature(feature))
       Err(err) => Err(err)
     }
   } else if kind == "FeatureCollection" {
-    parser.parse_feature_collection(value, 1)
+    match parser.parse_feature_collection_features(value, 1) {
+      Ok(features) => Ok(FeatureCollection(features))
+      Err(err) => Err(err)
+    }
   } else {
-    parser.parse_geometry_object(value, 1)
+    match parser.parse_geometry_object(value, 1) {
+      Ok(geometry) => Ok(Geometry(geometry))
+      Err(err) => Err(err)
+    }
+  }
+}
+
+///|
+pub fn parse_geojson(
+  source : StringView,
+  limits : GeoLimits,
+) -> Result[Geometry, GeoError] {
+  let object = match parse_geojson_object(source, limits) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  match object {
+    Geometry(geometry) => Ok(geometry)
+    Feature(feature) =>
+      match feature.geometry {
+        Some(geometry) => Ok(geometry)
+        None => Ok(GeometryCollection([]))
+      }
+    FeatureCollection(features) => {
+      let geometries : Array[Geometry] = []
+      for feature in features {
+        match feature.geometry {
+          Some(geometry) => geometries.push(geometry)
+          None => ()
+        }
+      }
+      Ok(GeometryCollection(geometries))
+    }
   }
 }

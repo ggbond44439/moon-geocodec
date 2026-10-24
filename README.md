@@ -7,7 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.2.2` adds point-location predicates and bounding-box queries.
+`0.2.3` adds a Feature-preserving GeoJSON object API.
 
 ## WKT parser
 
@@ -159,6 +159,10 @@ three-dimensional positions, empty geometry arrays, Features, and
 FeatureCollections. Feature properties and bounding boxes are ignored because
 the output is the typed geometry model. Null feature geometries are skipped;
 FeatureCollections are represented as `GeometryCollection`.
+
+`parse_geojson_object` and `format_geojson_object` preserve Feature ids,
+properties, null geometries, and FeatureCollections when callers need more than
+the flattened geometry view.
 
 ## GeoJSON export and conversions
 
@@ -330,7 +334,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.2.2
+moon add ggbond44439/moon_geocodec@0.2.3
 ```
 
 ## Build and test

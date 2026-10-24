@@ -321,6 +321,61 @@ pub fn format_geojson(geometry : Geometry) -> Result[String, GeoError] {
 }
 
 ///|
+fn format_geojson_feature(feature : GeoJsonFeature) -> Result[String, GeoError] {
+  let builder = StringBuilder()
+  builder.write_string("{\"type\":\"Feature\",\"geometry\":")
+  match feature.geometry {
+    Some(geometry) => {
+      let text = match format_geojson(geometry) {
+        Ok(value) => value
+        Err(err) => return Err(err)
+      }
+      builder.write_string(text)
+    }
+    None => builder.write_string("null")
+  }
+  builder.write_string(",\"properties\":")
+  builder.write_string(feature.properties.stringify())
+  match feature.id {
+    Some(id) => {
+      builder.write_string(",\"id\":")
+      builder.write_string(id.stringify())
+    }
+    None => ()
+  }
+  builder.write_string("}")
+  Ok(builder.to_string())
+}
+
+///|
+pub fn format_geojson_object(
+  object : GeoJsonObject,
+) -> Result[String, GeoError] {
+  match object {
+    Geometry(geometry) => format_geojson(geometry)
+    Feature(feature) => format_geojson_feature(feature)
+    FeatureCollection(features) => {
+      let builder = StringBuilder()
+      builder.write_string("{\"type\":\"FeatureCollection\",\"features\":[")
+      let mut first = true
+      for feature in features {
+        if !first {
+          builder.write_string(",")
+        }
+        let text = match format_geojson_feature(feature) {
+          Ok(value) => value
+          Err(err) => return Err(err)
+        }
+        builder.write_string(text)
+        first = false
+      }
+      builder.write_string("]}")
+      Ok(builder.to_string())
+    }
+  }
+}
+
+///|
 pub fn wkt_to_geojson(
   source : StringView,
   limits : GeoLimits,
