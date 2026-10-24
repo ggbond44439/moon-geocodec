@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub const VERSION : String = "0.2.1"
+pub const VERSION : String = "0.2.2"
 
 pub fn format_ewkb(SpatialGeometry) -> Result[Bytes, GeoError]
 
@@ -61,8 +61,10 @@ pub(all) struct BoundingBox {
   max_x : Double
   max_y : Double
 } derive(Eq, @debug.Debug)
+pub fn BoundingBox::contains_xy(Self, Double, Double) -> Bool
 pub fn BoundingBox::equal(Self, Self) -> Bool
 pub fn BoundingBox::height(Self) -> Double
+pub fn BoundingBox::intersects(Self, Self) -> Bool
 pub fn BoundingBox::not_equal(Self, Self) -> Bool
 pub fn BoundingBox::to_repr(Self) -> @debug.Repr
 pub fn BoundingBox::width(Self) -> Double
@@ -79,6 +81,7 @@ pub fn BoundingBox3D::depth(Self) -> Double
 pub fn BoundingBox3D::equal(Self, Self) -> Bool
 pub fn BoundingBox3D::extent(Self) -> (Double, Double, Double)
 pub fn BoundingBox3D::height(Self) -> Double
+pub fn BoundingBox3D::intersects(Self, Self) -> Bool
 pub fn BoundingBox3D::not_equal(Self, Self) -> Bool
 pub fn BoundingBox3D::to_repr(Self) -> @debug.Repr
 pub fn BoundingBox3D::width(Self) -> Double
@@ -164,12 +167,15 @@ pub fn Geometry::area(Self) -> Double
 pub fn Geometry::bounds(Self) -> BoundingBox?
 pub fn Geometry::bounds_3d(Self) -> BoundingBox3D?
 pub fn Geometry::centroid(Self) -> Coordinate?
+pub fn Geometry::contains_point(Self, Coordinate, tolerance? : Double) -> Bool
 pub fn Geometry::coordinate_count(Self) -> Int
+pub fn Geometry::covers_point(Self, Coordinate, tolerance? : Double) -> Bool
 pub fn Geometry::dimension(Self) -> CoordinateDimension?
 pub fn Geometry::equal(Self, Self) -> Bool
 pub fn Geometry::is_empty(Self) -> Bool
 pub fn Geometry::kind(Self) -> GeometryKind
 pub fn Geometry::length(Self) -> Double
+pub fn Geometry::locate_point(Self, Coordinate, tolerance? : Double) -> PointLocation
 pub fn Geometry::not_equal(Self, Self) -> Bool
 pub fn Geometry::to_repr(Self) -> @debug.Repr
 
@@ -185,6 +191,15 @@ pub(all) enum GeometryKind {
 pub fn GeometryKind::equal(Self, Self) -> Bool
 pub fn GeometryKind::not_equal(Self, Self) -> Bool
 pub fn GeometryKind::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PointLocation {
+  Outside
+  Boundary
+  Inside
+} derive(Eq, @debug.Debug)
+pub fn PointLocation::equal(Self, Self) -> Bool
+pub fn PointLocation::not_equal(Self, Self) -> Bool
+pub fn PointLocation::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SpatialGeometry {
   srid : Int?

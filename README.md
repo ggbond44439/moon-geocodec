@@ -7,8 +7,7 @@ vectors for GIS and spatial data pipelines.
 
 ## Status
 
-`0.2.1` adds topological validation, polygon metrics, and the
-`validate-topology` CLI command.
+`0.2.2` adds point-location predicates and bounding-box queries.
 
 ## WKT parser
 
@@ -224,6 +223,25 @@ when all contributing coordinates provide it.
 `length` returns line/ring length using 3D distance when both endpoints have Z.
 `area` returns planar polygon area with holes subtracted.
 
+## Spatial predicates
+
+```moonbit
+let location = polygon.locate_point(
+  @moon_geocodec.Coordinate::xy(2.0, 2.0),
+)
+let inside = polygon.contains_point(
+  @moon_geocodec.Coordinate::xy(2.0, 2.0),
+)
+let covered = polygon.covers_point(
+  @moon_geocodec.Coordinate::xy(0.0, 2.0),
+)
+```
+
+`locate_point` returns `Inside`, `Boundary`, or `Outside` for points, lines,
+polygons, multipart geometries, and collections. The default tolerance is
+`1e-12`; callers can pass a different value. `BoundingBox` and
+`BoundingBox3D` also provide containment and intersection checks.
+
 ## CLI
 
 The executable supports geometry inspection, structural validation, and format
@@ -312,7 +330,7 @@ spatial indexing, and GEOS-level operations are outside the initial scope.
 ## Install
 
 ```text
-moon add ggbond44439/moon_geocodec@0.2.1
+moon add ggbond44439/moon_geocodec@0.2.2
 ```
 
 ## Build and test
